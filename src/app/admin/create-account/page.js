@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function CreateAccountPage() {
-
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -18,36 +17,32 @@ export default function CreateAccountPage() {
     account_type: "Chequing",
     currency: "CAD",
     balance: 0,
-    account_number: ""
+    account_number: "",
   });
 
   const handleChange = (e) => {
-
     setForm({
       ...form,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
-
   };
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
 
     const loadingToast = toast.loading("Creating account...");
 
     try {
-
       const res = await fetch("/api/admin/create-account", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...form,
           user_id,
-          account_number: manualNumber ? form.account_number : null
-        })
+          account_number: manualNumber ? form.account_number : null,
+        }),
       });
 
       const data = await res.json();
@@ -55,39 +50,28 @@ export default function CreateAccountPage() {
       toast.dismiss(loadingToast);
 
       if (res.ok) {
-
         toast.success("Account created successfully");
 
         setTimeout(() => {
           router.push(`/admin/customers/${user_id}`);
         }, 700);
-
       } else {
-
         toast.error(data.error || "Failed to create account");
-
       }
-
     } catch (error) {
-
       toast.dismiss(loadingToast);
       toast.error("Server error occurred");
-
     }
-
   };
 
   return (
     <div className="flex justify-center pt-10">
-
       <div className="w-full max-w-xl bg-white shadow-lg rounded-xl p-8 border border-blue-100">
-
         <h1 className="text-2xl font-semibold text-blue-700 mb-6">
           Create Account
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-
           <input
             type="text"
             name="account_name"
@@ -130,7 +114,6 @@ export default function CreateAccountPage() {
           {/* ACCOUNT NUMBER MODE */}
 
           <div className="flex items-center gap-3">
-
             <input
               type="checkbox"
               checked={manualNumber}
@@ -140,23 +123,20 @@ export default function CreateAccountPage() {
             <span className="text-sm text-gray-600">
               Manually enter account number
             </span>
-
           </div>
 
           {manualNumber && (
-
-           <input
-  type="text"
-  name="account_number"
-  placeholder="7 digit account number"
-  value={form.account_number}
-  onChange={handleChange}
-  pattern="[0-9]{7}"
-  maxLength={7}
-  className="w-full border p-3 rounded text-black"
-  required
-/>
-
+            <input
+              type="text"
+              name="account_number"
+              placeholder="7 digit account number"
+              value={form.account_number}
+              onChange={handleChange}
+              pattern="[0-9]{7}"
+              maxLength={7}
+              className="w-full border p-3 rounded text-black"
+              required
+            />
           )}
 
           <button
@@ -165,11 +145,8 @@ export default function CreateAccountPage() {
           >
             Create Account
           </button>
-
         </form>
-
       </div>
-
     </div>
   );
 }
