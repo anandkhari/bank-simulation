@@ -1,9 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-function generateAccountNumber() {
-  return Math.floor(1000000 + Math.random() * 9000000).toString();
-}
-
 export async function POST(req) {
   try {
 
@@ -15,57 +11,42 @@ export async function POST(req) {
       account_type,
       currency,
       balance,
-      account_number: manualAccountNumber
+      transit_number,
+      account_number
     } = body;
 
-    let account_number = manualAccountNumber;
-
     /* ----------------------------- */
-    /* AUTO GENERATE ACCOUNT NUMBER  */
+    /* VALIDATION                    */
     /* ----------------------------- */
 
-    if (!account_number) {
-
-      let isUnique = false;
-
-      while (!isUnique) {
-
-        const generated = generateAccountNumber();
-
-        const { data } = await supabaseAdmin
-          .from("accounts")
-          .select("id")
-          .eq("account_number", generated)
-          .maybeSingle();
-
-        if (!data) {
-          account_number = generated;
-          isUnique = true;
-        }
-
-      }
-
+    if (!transit_number || !account_number) {
+      return Response.json(
+        { error: "Transit number and account number are required" },
+        { status: 400 }
+      );
     }
 
     /* ----------------------------- */
-    /* MANUAL ACCOUNT NUMBER CHECK   */
+    /* CREATE FULL ACCOUNT NUMBER    */
     /* ----------------------------- */
 
-    else {
+    const full_account_number = `${transit_number}-${account_number}`;
 
-      const { data: existing } = await supabaseAdmin
-        .from("accounts")
-        .select("id")
-        .eq("account_number", account_number)
-        .maybeSingle();
+    /* ----------------------------- */
+    /* DUPLICATE CHECK               */
+    /* ----------------------------- */
 
-      if (existing) {
-        return Response.json(
-          { error: "Account number already exists" },
-          { status: 400 }
-        );
-      }
+    const { data: existing } = await supabaseAdmin
+      .from("accounts")
+      .select("id")
+      .eq("account_number", full_account_number)
+      .maybeSingle();
 
+    if (existing) {
+      return Response.json(
+        { error: "Account number already exists" },
+        { status: 400 }
+      );
     }
 
     /* ----------------------------- */
@@ -77,7 +58,7 @@ export async function POST(req) {
       .insert({
         user_id,
         account_name,
-        account_number,
+        account_number: full_account_number,
         account_type,
         currency,
         balance

@@ -105,18 +105,23 @@ export default function ClientHeader() {
         </div>
       </div>
 
-      {/* SECONDARY NAVIGATION */}
-      <div className="bg-gray-100 border-b">
-        <div className="max-w-6xl mx-auto flex gap-8 px-4 text-sm">
-          <button className="py-3 border-b-2 border-[var(--client-brand)] font-medium text-[var(--client-brand)]">
-            Accounts Summary
-          </button>
+  {/* SECONDARY NAVIGATION */}
+<div className="bg-gray-100 border-b">
+  <div className="max-w-6xl mx-auto flex gap-8 px-4 text-sm">
 
-          <button className="py-3 text-gray-600 hover:text-[var(--client-brand)]">
-            Profile & Account Settings
-          </button>
-        </div>
-      </div>
+    <button
+      onClick={() => router.push("/client/dashboard")}
+      className="py-3 border-b-2 border-[var(--client-brand)] font-medium text-[var(--client-brand)]"
+    >
+      Accounts Summary
+    </button>
+
+    <button className="py-3 text-gray-600 hover:text-[var(--client-brand)]">
+      Profile & Account Settings
+    </button>
+
+  </div>
+</div>
     </div>
   );
 }

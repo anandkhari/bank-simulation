@@ -6,48 +6,50 @@ export default function FilterDrawer({
   filters,
   setFilters,
   onApply,
-  onClear
+  onClear,
 }) {
-
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end ">
-
+    <div
+      className={`fixed inset-0 z-50 flex justify-end transition-opacity  duration-800 ${
+        show ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      }`}
+    >
       {/* OVERLAY */}
       <div
-        className="absolute inset-0 bg-black/30"
+        className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ${
+          show ? "opacity-100" : "opacity-0"
+        }`}
         onClick={onClose}
       />
 
       {/* DRAWER */}
-      <div className="relative w-72 h-full bg-white shadow-xl p-6 overflow-y-auto">
-
+      <div
+        className={`relative w-72 h-full bg-white shadow-xl p-6 overflow-y-auto transform transition-transform duration-300 ease-in-out ${
+          show ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6 p-2 shadow-sm">
-          <h2 className="text-base tracking-wide text-gray-800">Filter by</h2>
+          <h2 className="text-base tracking-wide text-gray-800">
+            Filter by
+          </h2>
 
-          <button
-            onClick={onClose}
-            className="text-gray-500"
-          >
+          <button onClick={onClose} className="text-gray-500">
             ✕
           </button>
         </div>
 
         {/* TRANSACTION TYPE */}
         <div className="mb-8">
-
           <p className="text-sm font-medium text-gray-600 mb-3">
             Transaction Type
           </p>
 
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-sm text-gray-600">
 
-            <label className="flex items-center  text-gray-600  gap-2">
+            <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="type"
                 checked={filters.type === "all"}
                 onChange={() =>
                   setFilters({ ...filters, type: "all" })
@@ -56,10 +58,9 @@ export default function FilterDrawer({
               All transactions
             </label>
 
-            <label className="flex items-center  text-gray-600  gap-2">
+            <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="type"
                 checked={filters.type === "cheques"}
                 onChange={() =>
                   setFilters({ ...filters, type: "cheques" })
@@ -68,10 +69,9 @@ export default function FilterDrawer({
               Cheques
             </label>
 
-            <label className="flex items-center  text-gray-600  gap-2">
+            <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="type"
                 checked={filters.type === "deposits"}
                 onChange={() =>
                   setFilters({ ...filters, type: "deposits" })
@@ -80,10 +80,9 @@ export default function FilterDrawer({
               Deposits
             </label>
 
-            <label className="flex items-center  text-gray-600  gap-2">
+            <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="type"
                 checked={filters.type === "withdrawals"}
                 onChange={() =>
                   setFilters({ ...filters, type: "withdrawals" })
@@ -97,12 +96,11 @@ export default function FilterDrawer({
 
         {/* DATE RANGE */}
         <div className="mb-8">
-
-          <p className="text-sm font-medium  text-gray-600 mb-3">
+          <p className="text-sm font-medium text-gray-600 mb-3">
             Date Range
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
 
             <input
               type="date"
@@ -110,10 +108,10 @@ export default function FilterDrawer({
               onChange={(e) =>
                 setFilters({
                   ...filters,
-                  startDate: e.target.value
+                  startDate: e.target.value,
                 })
               }
-              className="border w-full p-2 text-sm"
+              className="border w-full p-3 text-sm"
             />
 
             <input
@@ -122,10 +120,10 @@ export default function FilterDrawer({
               onChange={(e) =>
                 setFilters({
                   ...filters,
-                  endDate: e.target.value
+                  endDate: e.target.value,
                 })
               }
-              className="border w-full p-2 text-sm"
+              className="border w-full p-3 text-sm"
             />
 
           </div>
@@ -134,43 +132,49 @@ export default function FilterDrawer({
         {/* AMOUNT RANGE */}
         <div className="mb-10">
 
-          <p className="text-sm font-medium  text-gray-600  mb-3">
+          <p className="text-sm font-medium text-gray-600 mb-4">
             Amount Range
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-6">
 
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.minAmount}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  minAmount: e.target.value
-                })
-              }
-              className="border w-full p-2 text-sm"
-            />
+            <div>
+              <p className="text-sm text-gray-600 mb-2">Min.</p>
+              <input
+                type="number"
+                placeholder="$0.00"
+                value={filters.minAmount}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    minAmount: e.target.value,
+                  })
+                }
+                className="border w-full p-3 text-sm placeholder-gray-400"
+              />
+            </div>
 
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.maxAmount}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  maxAmount: e.target.value
-                })
-              }
-              className="border w-full p-2 text-sm"
-            />
+            <div>
+              <p className="text-sm text-gray-600 mb-2">Max.</p>
+              <input
+                type="number"
+                placeholder="$0.00"
+                value={filters.maxAmount}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    maxAmount: e.target.value,
+                  })
+                }
+                className="border w-full p-3 text-sm placeholder-gray-400"
+              />
+            </div>
 
           </div>
 
         </div>
 
-        {/* APPLY BUTTON */}
+        {/* APPLY */}
         <button
           onClick={onApply}
           className="w-full bg-brand text-white py-3 mb-3"
@@ -178,7 +182,7 @@ export default function FilterDrawer({
           Apply
         </button>
 
-        {/* CLEAR BUTTON */}
+        {/* CLEAR */}
         <button
           onClick={onClear}
           className="w-full border border-brand text-brand py-3"
@@ -187,7 +191,6 @@ export default function FilterDrawer({
         </button>
 
       </div>
-
     </div>
   );
 }

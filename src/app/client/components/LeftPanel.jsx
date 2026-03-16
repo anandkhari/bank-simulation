@@ -13,6 +13,18 @@ export default function LeftPanel() {
 
   const router = useRouter();
 
+  /* Format account number like 03282-1001403 */
+  const formatAccountNumber = (num) => {
+    if (!num) return "";
+
+    const str = num.toString();
+
+    const transit = str.slice(0, 5);
+    const account = str.slice(5);
+
+    return `${transit}-${account}`;
+  };
+
   useEffect(() => {
     const loadAccounts = async () => {
       try {
@@ -66,9 +78,9 @@ export default function LeftPanel() {
   return (
     <div className="space-y-8 py-10">
       {/* SERVICE NOTICE */}
-      <div className="bg-gray-50 border-l-4 border-brand p-5 text-sm shadow-sm">
+      {/* <div className="bg-gray-50 border-l-4 border-brand p-5 text-sm shadow-sm">
         <div className="flex gap-3">
-          {/* Info Icon */}
+
           <div className="w-6 h-6 bg-brand text-white rounded-full flex items-center justify-center">
             <Info size={14} />
           </div>
@@ -79,7 +91,9 @@ export default function LeftPanel() {
                 Potential Canada Post service disruption
               </p>
 
-              <button className="text-brand underline text-xs">Collapse</button>
+              <button className="text-brand underline text-xs">
+                Collapse
+              </button>
             </div>
 
             <p className="text-gray-600 text-sm mt-3">
@@ -93,14 +107,14 @@ export default function LeftPanel() {
             </a>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* BANK ACCOUNTS */}
       <div className="bg-white pt-5">
         <div className="flex justify-between items-center border-b-2 border-gray-700 pb-2">
           <h2 className="text-lg font-medium text-gray-600">Bank Accounts</h2>
 
-          <span className="text-gray-700 font-semibold">
+          <span className="text-gray-700 text-lg font-semibold">
             <span className="text-gray-600 text-sm mr-4 font-normal">
               Total:
             </span>
@@ -128,15 +142,26 @@ export default function LeftPanel() {
                 <p className="text-brand font-medium">{userName}</p>
 
                 <p className="text-gray-500 text-sm">
-                  {account.account_type} {account.account_number}
+                  {account.account_type}{" "}
+                  {formatAccountNumber(account.account_number)}
                 </p>
               </div>
 
-              <div className="font-medium text-gray-800">
-                ${Number(account.balance).toFixed(2)}
-                <span className="text-xs align-super ml-1 text-gray-500">
-                  CAD
-                </span>
+              <div className="flex items-center gap-4">
+                {/* BALANCE */}
+                <div className="font-medium text-lg text-gray-800">
+                  ${Number(account.balance).toFixed(2)}
+                  <span className="text-xs  align-super ml-1 text-gray-500">
+                    CAD
+                  </span>
+                </div>
+
+                {/* THREE DOT MENU */}
+                <div className="flex flex-col gap-[3px] cursor-pointer">
+                  <span className="w-[4px] h-[4px] bg-brand rounded-full"></span>
+                  <span className="w-[4px] h-[4px] bg-brand rounded-full"></span>
+                  <span className="w-[4px] h-[4px] bg-brand rounded-full"></span>
+                </div>
               </div>
             </div>
           ))}

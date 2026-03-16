@@ -2,6 +2,11 @@ import ClientHeader from "@/app/client/components/ClientHeader";
 import HeroBanner from "../components/HeroBanner";
 import LeftPanel from "../components/LeftPanel";
 import RightPanel from "../components/RightPanel";
+import AccountSummaryFooter from "../components/AccountSummaryFooter";
+
+export const metadata = {
+  title: "Business Accounts - RBC Online Banking",
+};
 
 export default function Dashboard() {
 
@@ -26,8 +31,9 @@ export default function Dashboard() {
 
       </div>
 
+      <AccountSummaryFooter />
+
     </div>
 
   );
-
 }

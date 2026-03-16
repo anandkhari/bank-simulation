@@ -14,6 +14,15 @@ import {
   Download,
 } from "lucide-react";
 
+  import {
+  HelpCircle,
+
+  Bell,
+  Receipt,
+  Repeat,
+  Send
+} from "lucide-react";
+
 import FilterDrawer from "@/app/client/components/FilterDrawer";
 
 export default function LeftAccountPanel() {
@@ -27,13 +36,13 @@ export default function LeftAccountPanel() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilter, setShowFilter] = useState(false);
 
-  const [filters, setFilters] = useState({
-    type: "all",
-    startDate: "",
-    endDate: "",
-    minAmount: "",
-    maxAmount: "",
-  });
+ const [filters, setFilters] = useState({
+  type: "all",
+  startDate: "2026-01-27",
+  endDate: "2026-03-25",
+  minAmount: "",
+  maxAmount: "",
+});
 
   const [userName, setUserName] = useState("");
 
@@ -65,12 +74,21 @@ export default function LeftAccountPanel() {
         setFilteredTransactions(txData);
       }
 
-      const { data: user } = await supabase.auth.getUser();
+      const { data: sessionData } = await supabase.auth.getSession();
 
-      if (user?.user?.user_metadata?.full_name) {
-        setUserName(user.user.user_metadata.full_name);
-      }
+if (sessionData?.session) {
+  const userId = sessionData.session.user.id;
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", userId)
+    .single();
+
+  if (profile) {
+    setUserName(profile.name);
+  }
+}
     };
 
     loadData();
@@ -225,31 +243,91 @@ export default function LeftAccountPanel() {
         </div>
       </div>
 
-      {/* CURRENT ACCOUNT CARD */}
-      <div className="bg-gray-50 p-5 grid grid-cols-4 gap-6 items-center">
+    
 
-        <img src="/card-placeholder.png" alt="card" className="w-36" />
+<div className="bg-gray-50 border">
 
-        <div>
-          <p className="text-gray-800 text-sm">Current Balance</p>
-          <p className="font-semibold text-gray-800">
-            ${formatMoney(account.balance)}
-          </p>
-        </div>
+  {/* BALANCE GRID */}
+  <div className="grid grid-cols-4 items-center">
 
-        <div>
-          <p className="text-gray-600 text-sm">Available Balance</p>
-          <p className="font-semibold text-gray-800">
-            ${formatMoney(account.balance)}
-          </p>
-        </div>
+    {/* CARD IMAGE */}
+    <div className="p-3">
+      <img
+        src="/card-placeholder.png"
+        alt="card"
+        className="w-44 rounded-md shadow-sm"
+      />
+    </div>
 
-        <div>
-          <p className="text-gray-600 text-sm">Authorized Overdraft</p>
-          <p className="font-semibold text-gray-800">$0.00</p>
-        </div>
-
+    {/* CURRENT BALANCE */}
+    <div className="border-l p-2">
+      <div className="  font-light text-gray-800 text-base">
+        Current Balance:
+        <HelpCircle size={14} className="text-[var(--client-brand)]" />
       </div>
+
+      <p className="text-lg font-normal text-gray-900 mt-1">
+        ${formatMoney(account.balance)}
+      </p>
+    </div>
+
+    {/* AVAILABLE BALANCE */}
+    <div className="border-l p-6">
+     <div className="  font-light text-gray-800 text-base">
+        Available Balance:
+        <HelpCircle size={16} className="text-[var(--client-brand)]" />
+      </div>
+
+      <p className="text-lg font-normal text-gray-900 mt-1">
+        ${formatMoney(account.balance)}
+      </p>
+    </div>
+
+    {/* OVERDRAFT */}
+    <div className="border-l p-6">
+      <div className="  font-light text-gray-800 text-base">
+        Authorized Overdraft:
+        <HelpCircle size={16} className="text-[var(--client-brand)]" />
+      </div>
+
+      <p className="text-lg font-normal text-gray-900 mt-1">
+        $0.00
+      </p>
+    </div>
+
+  </div>
+
+  {/* QUICK ACTIONS */}
+  <div className=" bg-white px-6 py-4 flex justify-between text-[var(--client-brand)] text-sm">
+
+    <div className="flex items-center gap-2 cursor-pointer hover:underline">
+      <FileText size={18} />
+      View <br /> Statements
+    </div>
+
+    <div className="flex items-center gap-2 cursor-pointer hover:underline">
+      <Bell size={18} />
+      Set Up  <br /> Alerts
+    </div>
+
+    <div className="flex items-center gap-2 cursor-pointer hover:underline">
+      <Receipt size={18} />
+      Pay  <br /> Bills
+    </div>
+
+    <div className="flex items-center gap-2 cursor-pointer hover:underline">
+      <Repeat size={18} />
+      Transfer  <br /> Funds
+    </div>
+
+    <div className="flex items-center gap-2 cursor-pointer hover:underline">
+      <Send size={18} />
+      Interac e- <br />Transfer
+    </div>
+
+  </div>
+
+</div>
 
       {/* TRANSACTIONS HEADER */}
       <div className="flex justify-between items-center text-base text-gray-600">

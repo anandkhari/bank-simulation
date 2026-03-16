@@ -10,13 +10,12 @@ export default function CreateAccountPage() {
 
   const user_id = searchParams.get("user_id");
 
-  const [manualNumber, setManualNumber] = useState(false);
-
   const [form, setForm] = useState({
     account_name: "",
     account_type: "Chequing",
     currency: "CAD",
-    balance: 0,
+    balance: "",
+    transit_number: "",
     account_number: "",
   });
 
@@ -41,7 +40,6 @@ export default function CreateAccountPage() {
         body: JSON.stringify({
           ...form,
           user_id,
-          account_number: manualNumber ? form.account_number : null,
         }),
       });
 
@@ -72,6 +70,7 @@ export default function CreateAccountPage() {
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ACCOUNT NAME */}
           <input
             type="text"
             name="account_name"
@@ -82,6 +81,7 @@ export default function CreateAccountPage() {
             required
           />
 
+          {/* ACCOUNT TYPE */}
           <select
             name="account_type"
             value={form.account_type}
@@ -92,6 +92,7 @@ export default function CreateAccountPage() {
             <option>Savings</option>
           </select>
 
+          {/* CURRENCY */}
           <select
             name="currency"
             value={form.currency}
@@ -102,6 +103,7 @@ export default function CreateAccountPage() {
             <option>USD</option>
           </select>
 
+          {/* INITIAL BALANCE */}
           <input
             type="number"
             name="balance"
@@ -109,36 +111,36 @@ export default function CreateAccountPage() {
             value={form.balance}
             onChange={handleChange}
             className="w-full border p-3 rounded text-black"
+            required
           />
 
-          {/* ACCOUNT NUMBER MODE */}
+          {/* TRANSIT NUMBER */}
+          <input
+            type="text"
+            name="transit_number"
+            placeholder="Transit Number (04352)"
+            pattern="[0-9]{5}"
+            title="Transit number must be 5 digits"
+            value={form.transit_number}
+            onChange={handleChange}
+            className="w-full border p-3 rounded text-black"
+            required
+          />
 
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={manualNumber}
-              onChange={() => setManualNumber(!manualNumber)}
-            />
+          {/* ACCOUNT NUMBER */}
+          <input
+            type="text"
+            name="account_number"
+            placeholder="Account Number (9876346)"
+            pattern="[0-9]{7}"
+            title="Account number must be 7 digits"
+            value={form.account_number}
+            onChange={handleChange}
+            className="w-full border p-3 rounded text-black"
+            required
+          />
 
-            <span className="text-sm text-gray-600">
-              Manually enter account number
-            </span>
-          </div>
-
-          {manualNumber && (
-            <input
-              type="text"
-              name="account_number"
-              placeholder="7 digit account number"
-              value={form.account_number}
-              onChange={handleChange}
-              pattern="[0-9]{7}"
-              maxLength={7}
-              className="w-full border p-3 rounded text-black"
-              required
-            />
-          )}
-
+          {/* CREATE BUTTON */}
           <button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded"

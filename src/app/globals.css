@@ -38,7 +38,7 @@ body {
 }
 
 input, select, textarea {
-  @apply text-gray-800;
+  @apply text-gray-600;
 }
 
 @keyframes loadingDot {
