@@ -33,33 +33,29 @@ export default function AccountSummaryFooter() {
         <p>Royal Bank of Canada Website, © 1995-2026</p>
 
         <div className="flex items-center gap-4">
+          <a className="flex items-center gap-1 hover:underline">
+            Legal
+            <ExternalLink size={14} />
+          </a>
 
-  <a className="flex items-center gap-1 hover:underline">
-    Legal
-    <ExternalLink size={14} />
-  </a>
+          <div className="w-[1px] h-4 bg-gray-400"></div>
 
-  <div className="w-[1px] h-4 bg-gray-400"></div>
+          <a className="flex items-center gap-1 hover:underline">
+            Accessibility
+            <ExternalLink size={14} />
+          </a>
 
-  <a className="flex items-center gap-1 hover:underline">
-    Accessibility
-    <ExternalLink size={14} />
-  </a>
+          <div className="w-[1px] h-4 bg-gray-400"></div>
 
-  <div className="w-[1px] h-4 bg-gray-400"></div>
+          <a className="flex items-center gap-1 hover:underline">
+            Privacy and Security
+            <ExternalLink size={14} />
+          </a>
 
-  <a className="flex items-center gap-1 hover:underline">
-    Privacy and Security
-    <ExternalLink size={14} />
-  </a>
+          <div className="w-[1px] h-4 bg-gray-400"></div>
 
-  <div className="w-[1px] h-4 bg-gray-400"></div>
-
-  <a className="hover:underline">
-    Advertising & Cookies
-  </a>
-
-</div>
+          <a className="hover:underline">Advertising & Cookies</a>
+        </div>
       </div>
     </div>
   );

@@ -4,8 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { User ,Lock ,ChevronDown} from "lucide-react";
-
+import { User, Lock, ChevronDown } from "lucide-react";
 
 export default function ClientHeader() {
   const router = useRouter();
@@ -14,12 +13,10 @@ export default function ClientHeader() {
   const [date, setDate] = useState("");
 
   async function handleLogout() {
+    await supabase.auth.signOut();
 
-  await supabase.auth.signOut();
-
-  router.push("/client/signed-out");
-
-}
+    router.push("/client/signed-out");
+  }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -53,8 +50,6 @@ export default function ClientHeader() {
     setDate(formatted);
   }, []);
 
- 
-
   return (
     <div className="w-full bg-white">
       {/* TOP HEADER */}
@@ -80,7 +75,8 @@ export default function ClientHeader() {
             </div>
             <button
               onClick={handleLogout}
-             className="bg-yellow-400 hover:bg-yellow-500 text-black text-xs px-4 py-2 flex items-center gap-2 cursor-pointer transition-colors duration-200">
+              className="bg-yellow-400 hover:bg-yellow-500 text-black text-xs px-4 py-2 flex items-center gap-2 cursor-pointer transition-colors duration-200"
+            >
               <Lock size={16} />
               Sign Out
             </button>
@@ -105,23 +101,21 @@ export default function ClientHeader() {
         </div>
       </div>
 
-  {/* SECONDARY NAVIGATION */}
-<div className="bg-gray-100 border-b">
-  <div className="max-w-6xl mx-auto flex gap-8 px-4 text-sm">
+      {/* SECONDARY NAVIGATION */}
+      <div className="bg-gray-100 border-b">
+        <div className="max-w-6xl mx-auto flex gap-8 px-4 text-sm">
+          <button
+            onClick={() => router.push("/client/dashboard")}
+            className="py-3 border-b-2 border-[var(--client-brand)] font-medium text-[var(--client-brand)]"
+          >
+            Accounts Summary
+          </button>
 
-    <button
-      onClick={() => router.push("/client/dashboard")}
-      className="py-3 border-b-2 border-[var(--client-brand)] font-medium text-[var(--client-brand)]"
-    >
-      Accounts Summary
-    </button>
-
-    <button className="py-3 text-gray-600 hover:text-[var(--client-brand)]">
-      Profile & Account Settings
-    </button>
-
-  </div>
-</div>
+          <button className="py-3 text-gray-600 hover:text-[var(--client-brand)]">
+            Profile & Account Settings
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
