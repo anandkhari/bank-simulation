@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 
 export default function CustomerProfilePage() {
   const { id } = useParams();
@@ -108,6 +109,34 @@ export default function CustomerProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async (accountId) => {
+    const confirmed = confirm(
+      "⚠️ Delete this account?\n\nThis will permanently remove the account and all its transactions.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/accounts/${accountId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Account deleted successfully");
+
+        // refresh accounts list
+        fetchCustomerData();
+      } else {
+        toast.error(data.error || "Delete failed");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong");
+    }
+  };
+
   if (loading) {
     return <div className="p-10 text-gray-600">Loading...</div>;
   }
@@ -116,7 +145,6 @@ export default function CustomerProfilePage() {
     <div className="p-8 space-y-8 bg-gray-50 min-h-screen">
       {/* CUSTOMER CARD */}
       <div className="bg-white p-8 rounded-2xl shadow-md border border-gray-100">
-        
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -184,10 +212,38 @@ export default function CustomerProfilePage() {
 
         {/* FORM GRID */}
         <div className="grid grid-cols-2 gap-6">
-          <Field label="Full Name" value={customer?.name} isEditing={isEditing} name="name" formData={formData} handleChange={handleChange} />
-          <Field label="Client Card" value={customer?.client_card} isEditing={isEditing} name="client_card" formData={formData} handleChange={handleChange} />
-          <Field label="Email Address" value={customer?.email} isEditing={isEditing} name="email" formData={formData} handleChange={handleChange} />
-          <Field label="Phone Number" value={customer?.phone} isEditing={isEditing} name="phone" formData={formData} handleChange={handleChange} />
+          <Field
+            label="Full Name"
+            value={customer?.name}
+            isEditing={isEditing}
+            name="name"
+            formData={formData}
+            handleChange={handleChange}
+          />
+          <Field
+            label="Client Card"
+            value={customer?.client_card}
+            isEditing={isEditing}
+            name="client_card"
+            formData={formData}
+            handleChange={handleChange}
+          />
+          <Field
+            label="Email Address"
+            value={customer?.email}
+            isEditing={isEditing}
+            name="email"
+            formData={formData}
+            handleChange={handleChange}
+          />
+          <Field
+            label="Phone Number"
+            value={customer?.phone}
+            isEditing={isEditing}
+            name="phone"
+            formData={formData}
+            handleChange={handleChange}
+          />
 
           {/* PASSWORD */}
           <div className="col-span-2">
@@ -239,6 +295,7 @@ export default function CustomerProfilePage() {
               <th className="p-3 text-left">Account Name</th>
               <th className="p-3 text-left">Type</th>
               <th className="p-3 text-left">Balance</th>
+              <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
 
@@ -255,12 +312,28 @@ export default function CustomerProfilePage() {
               <tr
                 key={account.id}
                 onClick={() => router.push(`/admin/accounts/${account.id}`)}
-                className="border-t hover:bg-gray-50 cursor-pointer transition"
+                className="border-t hover:bg-blue-50 cursor-pointer transition"
               >
-                <td className="p-3">{account.account_number}</td>
+                <td className="p-3 text-gray-800 hover:text-blue-600 transition">
+                  {account.account_number}
+                </td>
+
                 <td className="p-3">{account.account_name}</td>
                 <td className="p-3">{account.account_type}</td>
                 <td className="p-3 font-medium">${account.balance}</td>
+
+                {/* ACTION COLUMN */}
+                <td className="p-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // prevent row click navigation
+                      handleDeleteAccount(account.id);
+                    }}
+                    className="text-red-500 hover:text-red-700 transition"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

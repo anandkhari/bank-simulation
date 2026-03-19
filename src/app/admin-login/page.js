@@ -4,24 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
+import { Eye, EyeOff } from "lucide-react"; // Import eye icons
 
 export default function AdminLogin() {
-
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // State for visibility
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     if (loading) return;
-
     setLoading(true);
 
     try {
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -61,32 +59,23 @@ export default function AdminLogin() {
       }
 
       toast.success("Login successful");
-
       router.push("/admin");
-
     } catch (err) {
-
       console.error(err);
       toast.error("Something went wrong");
-
     } finally {
-
       setLoading(false);
-
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-
       <div className="bg-white p-8 rounded-xl shadow w-full max-w-md">
-
         <h1 className="text-2xl font-semibold text-gray-800 mb-6">
           Admin Login
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-4">
-
           <div>
             <label className="text-sm text-gray-600">Email</label>
             <input
@@ -94,19 +83,28 @@ export default function AdminLogin() {
               required
               className="w-full border rounded-lg p-2 mt-1"
               value={email}
-              onChange={(e)=>setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
           <div>
             <label className="text-sm text-gray-600">Password</label>
-            <input
-              type="password"
-              required
-              className="w-full border rounded-lg p-2 mt-1"
-              value={password}
-              onChange={(e)=>setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                className="w-full border rounded-lg p-2 mt-1 pr-10"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button
@@ -115,11 +113,8 @@ export default function AdminLogin() {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
-
         </form>
-
       </div>
-
     </div>
   );
 }

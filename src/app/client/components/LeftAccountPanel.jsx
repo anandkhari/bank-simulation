@@ -14,16 +14,10 @@ import {
   Download,
 } from "lucide-react";
 
-  import {
-  HelpCircle,
-
-  Bell,
-  Receipt,
-  Repeat,
-  Send
-} from "lucide-react";
+import { HelpCircle, Bell, Receipt, Repeat, Send } from "lucide-react";
 
 import FilterDrawer from "@/app/client/components/FilterDrawer";
+import { useRouter } from "next/navigation";
 
 export default function LeftAccountPanel() {
   const { id } = useParams();
@@ -35,14 +29,15 @@ export default function LeftAccountPanel() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const router = useRouter();
 
- const [filters, setFilters] = useState({
-  type: "all",
-  startDate: "2026-01-27",
-  endDate: "2026-03-25",
-  minAmount: "",
-  maxAmount: "",
-});
+  const [filters, setFilters] = useState({
+    type: "all",
+    startDate: "",
+    endDate: "",
+    minAmount: "",
+    maxAmount: "",
+  });
 
   const [userName, setUserName] = useState("");
 
@@ -54,7 +49,6 @@ export default function LeftAccountPanel() {
 
   useEffect(() => {
     const loadData = async () => {
-
       const { data: accountData } = await supabase
         .from("accounts")
         .select("*")
@@ -76,19 +70,19 @@ export default function LeftAccountPanel() {
 
       const { data: sessionData } = await supabase.auth.getSession();
 
-if (sessionData?.session) {
-  const userId = sessionData.session.user.id;
+      if (sessionData?.session) {
+        const userId = sessionData.session.user.id;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("id", userId)
-    .single();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", userId)
+          .single();
 
-  if (profile) {
-    setUserName(profile.name);
-  }
-}
+        if (profile) {
+          setUserName(profile.name);
+        }
+      }
     };
 
     loadData();
@@ -101,61 +95,110 @@ if (sessionData?.session) {
       year: "numeric",
     });
 
-  const formatMoney = (amount) =>
-    Number(amount).toFixed(2);
+  const formatMoney = (amount) => Number(amount).toFixed(2);
 
   const applyFiltersAndSearch = () => {
-    let filtered = [...transactions];
 
-    if (filters.type === "deposits") {
-      filtered = filtered.filter((tx) => tx.credit > 0);
-    }
+  // ── VALIDATION BLOCK ──────────────────────────────────────────
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
 
-    if (filters.type === "withdrawals") {
-      filtered = filtered.filter((tx) => tx.debit > 0);
-    }
+  if (filters.startDate && new Date(filters.startDate) > today) {
+    toast.error("Start date cannot be in the future");
+    return;
+  }
 
-    if (filters.type === "cheques") {
-      filtered = filtered.filter((tx) =>
-        tx.description?.toLowerCase().includes("cheque")
-      );
-    }
+  if (filters.endDate && new Date(filters.endDate) > today) {
+    toast.error("End date cannot be in the future");
+    return;
+  }
 
-    if (filters.startDate) {
-      filtered = filtered.filter(
-        (tx) => new Date(tx.date) >= new Date(filters.startDate)
-      );
-    }
+  if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+    toast.error("Start date cannot be after end date");
+    return;
+  }
 
-    if (filters.endDate) {
-      filtered = filtered.filter(
-        (tx) => new Date(tx.date) <= new Date(filters.endDate)
-      );
-    }
+  if (filters.minAmount && Number(filters.minAmount) < 0) {
+    toast.error("Minimum amount cannot be negative");
+    return;
+  }
 
-    if (filters.minAmount) {
-      filtered = filtered.filter(
-        (tx) => (tx.credit || tx.debit) >= Number(filters.minAmount)
-      );
-    }
+  if (filters.maxAmount && Number(filters.maxAmount) < 0) {
+    toast.error("Maximum amount cannot be negative");
+    return;
+  }
 
-    if (filters.maxAmount) {
-      filtered = filtered.filter(
-        (tx) => (tx.credit || tx.debit) <= Number(filters.maxAmount)
-      );
-    }
+  if (
+    filters.minAmount &&
+    filters.maxAmount &&
+    Number(filters.minAmount) > Number(filters.maxAmount)
+  ) {
+    toast.error("Minimum amount cannot be greater than maximum amount");
+    return;
+  }
 
-    if (searchTerm.trim() !== "") {
-      const keyword = searchTerm.toLowerCase();
+  // ── FILTERING BLOCK ───────────────────────────────────────────
+  let filtered = [...transactions];
 
-      filtered = filtered.filter((tx) =>
-        tx.description?.toLowerCase().includes(keyword)
-      );
-    }
+  // Transaction type
+  if (filters.type === "deposits") {
+    filtered = filtered.filter((tx) => Number(tx.credit) > 0);
+  }
 
-    setVisibleCount(50);
-    setFilteredTransactions(filtered);
-  };
+  if (filters.type === "withdrawals") {
+    filtered = filtered.filter((tx) => Number(tx.debit) > 0);
+  }
+
+  if (filters.type === "cheques") {
+    const chequeTerms = ["cheque", "cheq", "chq", "check"];
+    filtered = filtered.filter((tx) =>
+      chequeTerms.some((term) =>
+        tx.description?.toLowerCase().includes(term)
+      )
+    );
+  }
+
+  // Start date
+  if (filters.startDate) {
+    const start = new Date(filters.startDate);
+    start.setHours(0, 0, 0, 0);
+    filtered = filtered.filter((tx) => new Date(tx.date) >= start);
+  }
+
+  // End date — include the full end day
+  if (filters.endDate) {
+    const end = new Date(filters.endDate);
+    end.setHours(23, 59, 59, 999);
+    filtered = filtered.filter((tx) => new Date(tx.date) <= end);
+  }
+
+  // Amount range — use credit if present, otherwise debit
+  if (filters.minAmount) {
+    filtered = filtered.filter((tx) => {
+      const amount = Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit);
+      return amount >= Number(filters.minAmount);
+    });
+  }
+
+  if (filters.maxAmount) {
+    filtered = filtered.filter((tx) => {
+      const amount = Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit);
+      return amount <= Number(filters.maxAmount);
+    });
+  }
+
+  // Search term
+  if (searchTerm.trim() !== "") {
+    const keyword = searchTerm.trim().toLowerCase();
+    filtered = filtered.filter((tx) =>
+      tx.description?.toLowerCase().includes(keyword)
+    );
+  }
+
+  // ── RESULT ────────────────────────────────────────────────────
+  setVisibleCount(50);
+  setFilteredTransactions(filtered);
+};
 
   const clearAllFilters = () => {
     setFilters({
@@ -177,10 +220,8 @@ if (sessionData?.session) {
 
   return (
     <div className="space-y-8 py-6">
-
       {/* ACCOUNT HEADER */}
       <div className="flex justify-between items-center border-b pb-4">
-
         <div className="flex items-center gap-2 text-brand font-medium cursor-pointer">
           <span>
             {userName || "User"} ({(account?.account_number || "").slice(-4)})
@@ -190,10 +231,12 @@ if (sessionData?.session) {
 
         {/* ICON PANEL */}
         <div className="flex items-center text-brand text-sm">
-
-          <div className="flex flex-col items-center px-6 cursor-pointer">
+          <div
+            onClick={() => router.push("/client/accountsdocuments")}
+            className="flex flex-col items-center px-6 cursor-pointer hover:underline"
+          >
             <FileText size={20} />
-            <span className="text-xs mt-1 text-center">
+            <span className="text-xs mt-1 text-center leading-tight">
               Statements/
               <br />
               Documents
@@ -239,111 +282,98 @@ if (sessionData?.session) {
             <Printer size={20} />
             <span className="text-xs mt-1 text-center">Print</span>
           </div>
-
         </div>
       </div>
 
-    
+      <div className="bg-gray-50 border">
+        {/* BALANCE GRID */}
+        <div className="grid grid-cols-4 items-center">
+          {/* CARD IMAGE */}
+          <div className="p-3">
+            <img
+              src="/card-placeholder.png"
+              alt="card"
+              className="w-44 rounded-md shadow-sm"
+            />
+          </div>
 
-<div className="bg-gray-50 border">
+          {/* CURRENT BALANCE */}
+          <div className="border-l p-2">
+            <div className="  font-light text-gray-800 text-base">
+              Current Balance:
+              <HelpCircle size={14} className="text-[var(--client-brand)]" />
+            </div>
 
-  {/* BALANCE GRID */}
-  <div className="grid grid-cols-4 items-center">
+            <p className="text-lg font-normal text-gray-900 mt-1">
+              ${formatMoney(account.balance)}
+            </p>
+          </div>
 
-    {/* CARD IMAGE */}
-    <div className="p-3">
-      <img
-        src="/card-placeholder.png"
-        alt="card"
-        className="w-44 rounded-md shadow-sm"
-      />
-    </div>
+          {/* AVAILABLE BALANCE */}
+          <div className="border-l p-6">
+            <div className="  font-light text-gray-800 text-base">
+              Available Balance:
+              <HelpCircle size={16} className="text-[var(--client-brand)]" />
+            </div>
 
-    {/* CURRENT BALANCE */}
-    <div className="border-l p-2">
-      <div className="  font-light text-gray-800 text-base">
-        Current Balance:
-        <HelpCircle size={14} className="text-[var(--client-brand)]" />
+            <p className="text-lg font-normal text-gray-900 mt-1">
+              ${formatMoney(account.balance)}
+            </p>
+          </div>
+
+          {/* OVERDRAFT */}
+          <div className="border-l p-6">
+            <div className="  font-light text-gray-800 text-base">
+              Authorized Overdraft:
+              <HelpCircle size={16} className="text-[var(--client-brand)]" />
+            </div>
+
+            <p className="text-lg font-normal text-gray-900 mt-1">$0.00</p>
+          </div>
+        </div>
+
+        {/* QUICK ACTIONS */}
+        <div className=" bg-white px-6 py-4 flex justify-between text-[var(--client-brand)] text-sm">
+          <div className="flex items-center gap-2 cursor-pointer hover:underline">
+            <FileText size={18} />
+            View <br /> Statements
+          </div>
+
+          <div className="flex items-center gap-2 cursor-pointer hover:underline">
+            <Bell size={18} />
+            Set Up <br /> Alerts
+          </div>
+
+          <div className="flex items-center gap-2 cursor-pointer hover:underline">
+            <Receipt size={18} />
+            Pay <br /> Bills
+          </div>
+
+          <div className="flex items-center gap-2 cursor-pointer hover:underline">
+            <Repeat size={18} />
+            Transfer <br /> Funds
+          </div>
+
+          <div className="flex items-center gap-2 cursor-pointer hover:underline">
+            <Send size={18} />
+            Interac e- <br />
+            Transfer
+          </div>
+        </div>
       </div>
-
-      <p className="text-lg font-normal text-gray-900 mt-1">
-        ${formatMoney(account.balance)}
-      </p>
-    </div>
-
-    {/* AVAILABLE BALANCE */}
-    <div className="border-l p-6">
-     <div className="  font-light text-gray-800 text-base">
-        Available Balance:
-        <HelpCircle size={16} className="text-[var(--client-brand)]" />
-      </div>
-
-      <p className="text-lg font-normal text-gray-900 mt-1">
-        ${formatMoney(account.balance)}
-      </p>
-    </div>
-
-    {/* OVERDRAFT */}
-    <div className="border-l p-6">
-      <div className="  font-light text-gray-800 text-base">
-        Authorized Overdraft:
-        <HelpCircle size={16} className="text-[var(--client-brand)]" />
-      </div>
-
-      <p className="text-lg font-normal text-gray-900 mt-1">
-        $0.00
-      </p>
-    </div>
-
-  </div>
-
-  {/* QUICK ACTIONS */}
-  <div className=" bg-white px-6 py-4 flex justify-between text-[var(--client-brand)] text-sm">
-
-    <div className="flex items-center gap-2 cursor-pointer hover:underline">
-      <FileText size={18} />
-      View <br /> Statements
-    </div>
-
-    <div className="flex items-center gap-2 cursor-pointer hover:underline">
-      <Bell size={18} />
-      Set Up  <br /> Alerts
-    </div>
-
-    <div className="flex items-center gap-2 cursor-pointer hover:underline">
-      <Receipt size={18} />
-      Pay  <br /> Bills
-    </div>
-
-    <div className="flex items-center gap-2 cursor-pointer hover:underline">
-      <Repeat size={18} />
-      Transfer  <br /> Funds
-    </div>
-
-    <div className="flex items-center gap-2 cursor-pointer hover:underline">
-      <Send size={18} />
-      Interac e- <br />Transfer
-    </div>
-
-  </div>
-
-</div>
 
       {/* TRANSACTIONS HEADER */}
       <div className="flex justify-between items-center text-base text-gray-600">
-
         <p>Transactions as of {today}</p>
 
         <button className="flex items-center gap-2 text-brand">
           <Download size={18} />
           Download
         </button>
-
       </div>
 
       {/* SEARCH */}
       <div className="flex gap-2">
-
         <input
           placeholder="Search transactions"
           value={searchTerm}
@@ -365,21 +395,18 @@ if (sessionData?.session) {
           <SlidersHorizontal size={18} />
           Filter
         </button>
-
       </div>
 
       {/* RESULTS INFO */}
       <div className="flex items-center gap-6 text-gray-600 text-sm mt-4">
+        <p>
+          We found {filteredTransactions.length}{" "}
+          {filteredTransactions.length === 1 ? "result" : "results"}.
+        </p>
 
-        <p>We found {filteredTransactions.length} results.</p>
-
-        <button
-          onClick={clearAllFilters}
-          className="text-brand underline"
-        >
+        <button onClick={clearAllFilters} className="text-brand underline">
           Reset
         </button>
-
       </div>
 
       <p className="text-gray-600 text-sm mt-2">
@@ -389,7 +416,6 @@ if (sessionData?.session) {
 
       {/* TABLE */}
       <div className="bg-white border">
-
         <div className="grid grid-cols-5 border-b py-4 px-3 text-sm font-medium text-gray-700">
           <p>Date</p>
           <p>Description</p>
@@ -399,12 +425,10 @@ if (sessionData?.session) {
         </div>
 
         {filteredTransactions.slice(0, visibleCount).map((tx) => (
-
           <div
             key={tx.id}
             className="grid grid-cols-5 border-b border-gray-200 py-4 px-3 text-gray-600 text-sm items-center hover:bg-gray-50"
           >
-
             <p>{formatDate(tx.date)}</p>
 
             <p>{tx.description}</p>
@@ -415,22 +439,17 @@ if (sessionData?.session) {
               {tx.credit ? `$${formatMoney(tx.credit)}` : ""}
             </p>
 
-            <p className="text-right">
-              ${formatMoney(tx.balance_after)}
-            </p>
-
+            <p className="text-right">${formatMoney(tx.balance_after)}</p>
           </div>
-
         ))}
-
       </div>
 
       {/* SHOW MORE */}
       <div className="text-center py-6">
-
         <p className="text-gray-600 mb-4">
           Showing {Math.min(visibleCount, filteredTransactions.length)} of{" "}
-          {filteredTransactions.length} transactions
+          {filteredTransactions.length}{" "}
+          {filteredTransactions.length === 1 ? "transaction" : "transactions"}
         </p>
 
         {visibleCount < filteredTransactions.length && (
@@ -441,7 +460,6 @@ if (sessionData?.session) {
             Show More
           </button>
         )}
-
       </div>
 
       <FilterDrawer
@@ -458,7 +476,6 @@ if (sessionData?.session) {
           setShowFilter(false);
         }}
       />
-
     </div>
   );
 }

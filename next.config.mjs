@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  serverExternalPackages: ['your-package-name'],
+  experimental: {
+    // other experimental options if any
+  },
 };
 
 export default nextConfig;

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function BankingLogin() {
   const router = useRouter();
@@ -88,8 +89,6 @@ export default function BankingLogin() {
           className="object-cover"
         />
 
-      
-
         {/* CENTER CONTENT */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center z-10">
           {/* LOGO */}
@@ -102,9 +101,7 @@ export default function BankingLogin() {
           />
 
           {/* TITLE */}
-          <h1 className="text-xl  tracking-wide mb-1">
-            Secure Sign-In
-          </h1>
+          <h1 className="text-xl  tracking-wide mb-1">Secure Sign-In</h1>
 
           {/* SUBTITLE */}
           <p className="text-sm text-white/90">RBC Online Banking</p>
@@ -256,9 +253,9 @@ export default function BankingLogin() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    👁
+                    {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
                   </button>
                 </div>
 

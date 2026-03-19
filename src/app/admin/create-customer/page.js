@@ -47,7 +47,7 @@ export default function CreateCustomerPage() {
       if (res.ok) {
         toast.success("Customer created successfully");
 
-         router.push(`/admin/create-account?user_id=${data.user_id}`);
+        router.push(`/admin/create-account?user_id=${data.user_id}`);
 
         setForm({
           client_card: "",
@@ -96,30 +96,28 @@ export default function CreateCustomerPage() {
             />
           </div>
 
-         <div>
-  <label className="text-sm text-gray-600">Password</label>
+          <div>
+            <label className="text-sm text-gray-600">Password</label>
 
-  <div className="relative mt-1">
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                className="w-full border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 pr-12 rounded-md text-gray-900"
+                required
+              />
 
-    <input
-      type={showPassword ? "text" : "password"}
-      name="password"
-      value={form.password}
-      onChange={handleChange}
-      className="w-full border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 pr-12 rounded-md text-gray-900"
-      required
-    />
-
-    <button
-      type="button"
-      onClick={() => setShowPassword(!showPassword)}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-    >
-      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-    </button>
-
-  </div>
-</div>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
 
           <div>
             <label className="text-sm text-gray-600">Full Name</label>
@@ -144,16 +142,23 @@ export default function CreateCustomerPage() {
             />
           </div>
 
-          <div>
-            <label className="text-sm text-gray-600">Phone Number</label>
-            <input
-              type="text"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="w-full border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 rounded-md mt-1 text-gray-900"
-            />
-          </div>
+         <div className="relative">
+  <label className="text-sm text-gray-600">Phone Number</label>
+  <div className="flex mt-1">
+    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+      +1
+    </span>
+    <input
+      type="tel"
+      name="phone"
+      value={form.phone}
+      onChange={handleChange}
+      placeholder="123-456-7890"
+      pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+      className="flex-1 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 rounded-r-md text-gray-900"
+    />
+  </div>
+</div>
 
           {/* Button */}
           <button

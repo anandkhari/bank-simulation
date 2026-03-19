@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { FileText, Mail, Gift, Rocket, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 
 export default function HeroBanner() {
 
   const [greeting, setGreeting] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
 
@@ -61,16 +63,20 @@ export default function HeroBanner() {
       <div className="flex items-center gap-5 text-sm">
 
         {/* Statements */}
-        <div className="flex flex-col items-center cursor-pointer hover:text-white/80 transition">
+       <div 
+  onClick={() => router.push("/client/accountsdocuments")}
+  className="flex flex-col items-center cursor-pointer group transition-all duration-200"
+>
+  <FileText 
+    size={26} 
+    className="text-white/60 mb-2 group-hover:text-white transition-colors" 
+  />
 
-          <FileText size={26} className="text-white/60 mb-2" />
-
-          <p className="text-center leading-tight text-white/60">
-            Statements / <br />
-            Documents
-          </p>
-
-        </div>
+  <p className="text-center leading-tight text-white/60 group-hover:text-white group-hover:underline">
+    Statements / <br />
+    Documents
+  </p>
+</div>
 
 
         {/* Messages */}
