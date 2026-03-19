@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef } from "react";
 import { ChevronDown, FileText, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientHeader from "../components/ClientHeader";
@@ -15,7 +15,7 @@ const months = [
   "May",
   "June",
   "July",
-  "August",
+  "Aug",
   "September",
   "October",
   "November",
@@ -25,7 +25,9 @@ const months = [
 export default function AccountDocuments() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [selectedType, setSelectedType] = useState("Statements & general documents");
+  const [selectedType, setSelectedType] = useState(
+    "Statements & general documents",
+  );
   const [month, setMonth] = useState("All Months");
   const [year, setYear] = useState("Select");
 
@@ -35,7 +37,30 @@ export default function AccountDocuments() {
   const [error, setError] = useState("");
 
   const currentYear = new Date().getFullYear();
-  const years = ["Select", ...Array.from({ length: 7 }, (_, i) => String(currentYear - i))];
+  const years = [
+    "Select",
+    ...Array.from({ length: 7 }, (_, i) => String(currentYear - i)),
+  ];
+
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", user.id)
+          .single();
+
+        setUserName(profile?.name);
+      }
+    };
+    fetchUser();
+  }, []);
 
   // ── LOAD USER ACCOUNTS ──────────────────────────────────────
   useEffect(() => {
@@ -99,7 +124,9 @@ export default function AccountDocuments() {
         query = query.eq("month", month);
       }
 
-      const { data, error: fetchError } = await query.order("start_date", { ascending: false });
+      const { data, error: fetchError } = await query.order("start_date", {
+        ascending: false,
+      });
 
       if (fetchError) throw fetchError;
 
@@ -107,33 +134,22 @@ export default function AccountDocuments() {
       setSearched(true);
     } catch (err) {
       console.error("Error fetching statements:", err);
-      setError("Something went wrong while fetching documents. Please try again.");
+      setError(
+        "Something went wrong while fetching documents. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // ── OPEN PDF ─────────────────────────────────────────────────
-  const handleOpenPDF = async (fileUrl) => {
-    try {
-      // If it's already a full public URL, open directly
-      if (fileUrl.startsWith("http")) {
-        window.open(fileUrl, "_blank");
-        return;
-      }
-
-      // Otherwise generate a signed URL from Supabase storage
-      const { data, error } = await supabase.storage
-        .from("statements")
-        .createSignedUrl(fileUrl, 60 * 60); // 1 hour expiry
-
-      if (error) throw error;
-
-      window.open(data.signedUrl, "_blank");
-    } catch (err) {
-      console.error("Error opening PDF:", err);
-      setError("Could not open the document. Please try again.");
-    }
+  const handleDownload = async (url, filename) => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename || "statement.pdf";
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const formatDate = (dateStr) => {
@@ -149,9 +165,8 @@ export default function AccountDocuments() {
     <div className="min-h-screen bg-white font-sans">
       <ClientHeader />
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-20">
         <div className="flex flex-col md:flex-row gap-16 items-start">
-
           {/* LEFT SIDEBAR */}
           <div className="w-full md:w-64 flex-shrink-0 mt-48">
             <h2 className="text-[17px] font-medium text-gray-800 mb-6 px-1">
@@ -190,7 +205,6 @@ export default function AccountDocuments() {
             </div>
 
             <div className="max-w-xl space-y-8">
-
               {/* TYPE */}
               <Field label="What documents are you looking for?">
                 <SelectBox
@@ -263,53 +277,102 @@ export default function AccountDocuments() {
 
             {/* ── RESULTS ── */}
             {searched && (
-              <div className="mt-12 max-w-2xl">
+              <div className="mt-12 max-w-3xl">
                 {statements.length === 0 ? (
                   <div className="text-center py-16 border border-gray-200 bg-gray-50">
-                    <FileText size={40} className="mx-auto text-gray-300 mb-4" />
+                    <FileText
+                      size={40}
+                      className="mx-auto text-gray-300 mb-4"
+                    />
                     <p className="text-gray-500 text-[15px]">
                       No documents found for the selected filters.
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-sm text-gray-500 mb-4">
-                      {statements.length} {statements.length === 1 ? "document" : "documents"} found
+                    <p className="text-sm text-gray-500 mb-6">
+                      Current view: {statements.length}{" "}
+                      {statements.length === 1 ? "result" : "results"} for this
+                      search
                     </p>
 
-                    <div className="border border-gray-200 divide-y divide-gray-100">
-                      {statements.map((stmt) => (
-                        <div
-                          key={stmt.id}
-                          onClick={() => handleOpenPDF(stmt.file_url)}
-                          className="flex items-center justify-between px-6 py-5 hover:bg-gray-50 cursor-pointer group transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <FileText
-                              size={22}
-                              className="text-brand flex-shrink-0"
-                            />
-                            <div>
-                              <p className="text-[15px] font-medium text-gray-800 group-hover:text-brand transition-colors">
-                                {stmt.month} {stmt.year} Statement
-                              </p>
-                              <p className="text-[13px] text-gray-400 mt-0.5">
-                                {formatDate(stmt.start_date)} – {formatDate(stmt.end_date)}
-                                {stmt.opening_bal != null && stmt.closing_bal != null && (
-                                  <span className="ml-3">
-                                    · Opening ${Number(stmt.opening_bal).toFixed(2)} → Closing ${Number(stmt.closing_bal).toFixed(2)}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
+                    <table className="w-full border-collapse">
+                      <thead>
+                        {/* Applied border-t-2 and border-b-2 for the heavy lines. 
+      Using border-gray-900 (or border-black) to match the high-contrast bank style.
+    */}
+                        <tr className="border-t-1 border-b-2 border-gray-600">
+                          <th className="text-left text-[14px] font-semidold text-gray-900 py-5 pr-8">
+                            Account
+                          </th>
+                          <th className="text-left text-[14px] font-semibold text-gray-900 py-5 pr-8">
+                            Date
+                          </th>
+                          <th className="text-left text-[14px] font-semibold text-gray-900 py-5">
+                            Document
+                          </th>
+                        </tr>
+                      </thead>
 
-                          <span className="text-brand text-[13px] font-medium group-hover:underline flex-shrink-0">
-                            View PDF
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                      <tbody className="divide-y divide-gray-100">
+                        {statements.map((stmt) => (
+                          <tr
+                            key={stmt.id}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-5 pr-8 text-[14px] text-gray-700">
+                              {userName}
+                            </td>
+                            <td className="py-5 pr-8 text-[14px] text-gray-700">
+                              {formatDate(stmt.start_date)}
+                            </td>
+                            <td className="py-5">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[14px] text-gray-700">
+                                  Statement
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    handleDownload(
+                                      stmt.file_url,
+                                      `${stmt.month}_${stmt.year}_statement.pdf`,
+                                    )
+                                  }
+                                  className="flex items-center cursor-pointer gap-1.5 text-blue-600 hover:underline text-[14px] font-medium w-fit"
+                                >
+                                  PDF
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+
+                      {/* Added a footer to close the table with the same heavy line seen in statements */}
+                      <tfoot>
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="border-t-1 border-gray-600 py-2"
+                          ></td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 )}
               </div>
@@ -336,11 +399,25 @@ function Field({ label, children }) {
 /* ── SELECT BOX ────────────────────────────────────────────── */
 function SelectBox({ value, options = [], onChange, renderOption }) {
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false); // Track direction
+  const containerRef = useRef(null);
+
+  const toggleDropdown = () => {
+    if (!open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropdownHeight = 240; // This should match your max-h-60 (60 * 4px)
+
+      // If space below is less than dropdown height, drop up
+      setDropUp(spaceBelow < dropdownHeight);
+    }
+    setOpen(!open);
+  };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <div
-        onClick={() => setOpen(!open)}
+        onClick={toggleDropdown}
         className="border border-gray-400 p-4 flex justify-between items-center cursor-pointer hover:border-gray-600 bg-white h-[52px] relative z-10"
       >
         <span className="text-gray-600 text-[15px]">{value || "Select"}</span>
@@ -351,11 +428,12 @@ function SelectBox({ value, options = [], onChange, renderOption }) {
       </div>
 
       <div
-        className={`absolute left-0 right-0 bottom-full mb-1 bg-white border border-gray-300 z-50 shadow-lg origin-bottom transition-all duration-200 ease-out ${
-          open
-            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
-            : "opacity-0 translate-y-2 scale-95 pointer-events-none"
-        }`}
+        className={`absolute left-0 right-0 bg-white border border-gray-300 z-50 shadow-lg transition-all duration-200 ease-out 
+          ${dropUp ? "bottom-full mb-1 origin-bottom" : "top-full mt-1 origin-top"}
+          ${open 
+            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" 
+            : `opacity-0 ${dropUp ? "translate-y-2" : "-translate-y-2"} scale-95 pointer-events-none`
+          }`}
       >
         <div className="flex flex-col max-h-60 overflow-y-auto">
           {options.map((opt, i) => (
