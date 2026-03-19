@@ -13,11 +13,10 @@ import {
   SlidersHorizontal,
   Download,
 } from "lucide-react";
-
 import { HelpCircle, Bell, Receipt, Repeat, Send } from "lucide-react";
-
 import FilterDrawer from "@/app/client/components/FilterDrawer";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function LeftAccountPanel() {
   const { id } = useParams();
@@ -26,9 +25,9 @@ export default function LeftAccountPanel() {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [visibleCount, setVisibleCount] = useState(50);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(null);
   const router = useRouter();
 
   const [filters, setFilters] = useState({
@@ -69,19 +68,14 @@ export default function LeftAccountPanel() {
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
-
       if (sessionData?.session) {
         const userId = sessionData.session.user.id;
-
         const { data: profile } = await supabase
           .from("profiles")
           .select("name")
           .eq("id", userId)
           .single();
-
-        if (profile) {
-          setUserName(profile.name);
-        }
+        if (profile) setUserName(profile.name);
       }
     };
 
@@ -97,110 +91,138 @@ export default function LeftAccountPanel() {
 
   const formatMoney = (amount) => Number(amount).toFixed(2);
 
+  // ── QUICK DATE FILTER (14 days / 30 days / Last Month) ────────
+  const applyQuickFilter = (filter) => {
+    setActiveFilter(filter);
+    const now = new Date();
+    let filtered = [...transactions];
+
+    if (filter === "14") {
+      const from = new Date();
+      from.setDate(now.getDate() - 14);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((tx) => new Date(tx.date) >= from);
+    }
+
+    if (filter === "30") {
+      const from = new Date();
+      from.setDate(now.getDate() - 30);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((tx) => new Date(tx.date) >= from);
+    }
+
+    if (filter === "lastMonth") {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+      lastDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((tx) => {
+        const d = new Date(tx.date);
+        return d >= firstDay && d <= lastDay;
+      });
+    }
+
+    setVisibleCount(50);
+    setFilteredTransactions(filtered);
+  };
+
+  // ── FILTER DRAWER + SEARCH ────────────────────────────────────
   const applyFiltersAndSearch = () => {
+    const todayDate = new Date();
+    todayDate.setHours(23, 59, 59, 999);
 
-  // ── VALIDATION BLOCK ──────────────────────────────────────────
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
+    if (filters.startDate && new Date(filters.startDate) > todayDate) {
+      toast.error("Start date cannot be in the future");
+      return;
+    }
+    if (filters.endDate && new Date(filters.endDate) > todayDate) {
+      toast.error("End date cannot be in the future");
+      return;
+    }
+    if (
+      filters.startDate &&
+      filters.endDate &&
+      filters.startDate > filters.endDate
+    ) {
+      toast.error("Start date cannot be after end date");
+      return;
+    }
+    if (filters.minAmount && Number(filters.minAmount) < 0) {
+      toast.error("Minimum amount cannot be negative");
+      return;
+    }
+    if (filters.maxAmount && Number(filters.maxAmount) < 0) {
+      toast.error("Maximum amount cannot be negative");
+      return;
+    }
+    if (
+      filters.minAmount &&
+      filters.maxAmount &&
+      Number(filters.minAmount) > Number(filters.maxAmount)
+    ) {
+      toast.error("Minimum amount cannot be greater than maximum amount");
+      return;
+    }
 
-  if (filters.startDate && new Date(filters.startDate) > today) {
-    toast.error("Start date cannot be in the future");
-    return;
-  }
+    // Clear quick filter when using search/drawer
+    setActiveFilter(null);
 
-  if (filters.endDate && new Date(filters.endDate) > today) {
-    toast.error("End date cannot be in the future");
-    return;
-  }
+    let filtered = [...transactions];
 
-  if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
-    toast.error("Start date cannot be after end date");
-    return;
-  }
+    if (filters.type === "deposits") {
+      filtered = filtered.filter((tx) => Number(tx.credit) > 0);
+    }
+    if (filters.type === "withdrawals") {
+      filtered = filtered.filter((tx) => Number(tx.debit) > 0);
+    }
+    if (filters.type === "cheques") {
+      const chequeTerms = ["cheque", "cheq", "chq", "check"];
+      filtered = filtered.filter((tx) =>
+        chequeTerms.some((term) =>
+          tx.description?.toLowerCase().includes(term)
+        )
+      );
+    }
 
-  if (filters.minAmount && Number(filters.minAmount) < 0) {
-    toast.error("Minimum amount cannot be negative");
-    return;
-  }
+    if (filters.startDate) {
+      const start = new Date(filters.startDate);
+      start.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((tx) => new Date(tx.date) >= start);
+    }
+    if (filters.endDate) {
+      const end = new Date(filters.endDate);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((tx) => new Date(tx.date) <= end);
+    }
 
-  if (filters.maxAmount && Number(filters.maxAmount) < 0) {
-    toast.error("Maximum amount cannot be negative");
-    return;
-  }
+    if (filters.minAmount) {
+      filtered = filtered.filter((tx) => {
+        const amount =
+          Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit);
+        return amount >= Number(filters.minAmount);
+      });
+    }
+    if (filters.maxAmount) {
+      filtered = filtered.filter((tx) => {
+        const amount =
+          Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit);
+        return amount <= Number(filters.maxAmount);
+      });
+    }
 
-  if (
-    filters.minAmount &&
-    filters.maxAmount &&
-    Number(filters.minAmount) > Number(filters.maxAmount)
-  ) {
-    toast.error("Minimum amount cannot be greater than maximum amount");
-    return;
-  }
+    if (searchTerm.trim() !== "") {
+      const keyword = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter((tx) =>
+        tx.description?.toLowerCase().includes(keyword)
+      );
+    }
 
-  // ── FILTERING BLOCK ───────────────────────────────────────────
-  let filtered = [...transactions];
+    setVisibleCount(50);
+    setFilteredTransactions(filtered);
+  };
 
-  // Transaction type
-  if (filters.type === "deposits") {
-    filtered = filtered.filter((tx) => Number(tx.credit) > 0);
-  }
-
-  if (filters.type === "withdrawals") {
-    filtered = filtered.filter((tx) => Number(tx.debit) > 0);
-  }
-
-  if (filters.type === "cheques") {
-    const chequeTerms = ["cheque", "cheq", "chq", "check"];
-    filtered = filtered.filter((tx) =>
-      chequeTerms.some((term) =>
-        tx.description?.toLowerCase().includes(term)
-      )
-    );
-  }
-
-  // Start date
-  if (filters.startDate) {
-    const start = new Date(filters.startDate);
-    start.setHours(0, 0, 0, 0);
-    filtered = filtered.filter((tx) => new Date(tx.date) >= start);
-  }
-
-  // End date — include the full end day
-  if (filters.endDate) {
-    const end = new Date(filters.endDate);
-    end.setHours(23, 59, 59, 999);
-    filtered = filtered.filter((tx) => new Date(tx.date) <= end);
-  }
-
-  // Amount range — use credit if present, otherwise debit
-  if (filters.minAmount) {
-    filtered = filtered.filter((tx) => {
-      const amount = Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit);
-      return amount >= Number(filters.minAmount);
-    });
-  }
-
-  if (filters.maxAmount) {
-    filtered = filtered.filter((tx) => {
-      const amount = Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit);
-      return amount <= Number(filters.maxAmount);
-    });
-  }
-
-  // Search term
-  if (searchTerm.trim() !== "") {
-    const keyword = searchTerm.trim().toLowerCase();
-    filtered = filtered.filter((tx) =>
-      tx.description?.toLowerCase().includes(keyword)
-    );
-  }
-
-  // ── RESULT ────────────────────────────────────────────────────
-  setVisibleCount(50);
-  setFilteredTransactions(filtered);
-};
-
+  // ── CLEAR ALL ─────────────────────────────────────────────────
   const clearAllFilters = () => {
+    setActiveFilter(null);
     setFilters({
       type: "all",
       startDate: "",
@@ -208,7 +230,6 @@ export default function LeftAccountPanel() {
       minAmount: "",
       maxAmount: "",
     });
-
     setSearchTerm("");
     setVisibleCount(50);
     setFilteredTransactions(transactions);
@@ -242,9 +263,7 @@ export default function LeftAccountPanel() {
               Documents
             </span>
           </div>
-
           <div className="border-l h-10"></div>
-
           <div className="flex flex-col items-center px-6 cursor-pointer">
             <Mail size={20} />
             <span className="text-xs mt-1 text-center">
@@ -253,9 +272,7 @@ export default function LeftAccountPanel() {
               Alerts
             </span>
           </div>
-
           <div className="border-l h-10"></div>
-
           <div className="flex flex-col items-center px-6 cursor-pointer">
             <Gift size={20} />
             <span className="text-xs mt-1 text-center">
@@ -264,9 +281,7 @@ export default function LeftAccountPanel() {
               For You
             </span>
           </div>
-
           <div className="border-l h-10"></div>
-
           <div className="flex flex-col items-center px-6 cursor-pointer">
             <Rocket size={20} />
             <span className="text-xs mt-1 text-center">
@@ -275,9 +290,7 @@ export default function LeftAccountPanel() {
               Banking
             </span>
           </div>
-
           <div className="border-l h-10"></div>
-
           <div className="flex flex-col items-center px-6 cursor-pointer">
             <Printer size={20} />
             <span className="text-xs mt-1 text-center">Print</span>
@@ -285,10 +298,9 @@ export default function LeftAccountPanel() {
         </div>
       </div>
 
+      {/* BALANCE GRID */}
       <div className="bg-gray-50 border">
-        {/* BALANCE GRID */}
         <div className="grid grid-cols-4 items-center">
-          {/* CARD IMAGE */}
           <div className="p-3">
             <img
               src="/card-placeholder.png"
@@ -296,64 +308,51 @@ export default function LeftAccountPanel() {
               className="w-44 rounded-md shadow-sm"
             />
           </div>
-
-          {/* CURRENT BALANCE */}
           <div className="border-l p-2">
-            <div className="  font-light text-gray-800 text-base">
+            <div className="font-light text-gray-800 text-base flex items-center gap-1">
               Current Balance:
               <HelpCircle size={14} className="text-[var(--client-brand)]" />
             </div>
-
             <p className="text-lg font-normal text-gray-900 mt-1">
               ${formatMoney(account.balance)}
             </p>
           </div>
-
-          {/* AVAILABLE BALANCE */}
           <div className="border-l p-6">
-            <div className="  font-light text-gray-800 text-base">
+            <div className="font-light text-gray-800 text-base flex items-center gap-1">
               Available Balance:
               <HelpCircle size={16} className="text-[var(--client-brand)]" />
             </div>
-
             <p className="text-lg font-normal text-gray-900 mt-1">
               ${formatMoney(account.balance)}
             </p>
           </div>
-
-          {/* OVERDRAFT */}
           <div className="border-l p-6">
-            <div className="  font-light text-gray-800 text-base">
+            <div className="font-light text-gray-800 text-base flex items-center gap-1">
               Authorized Overdraft:
               <HelpCircle size={16} className="text-[var(--client-brand)]" />
             </div>
-
             <p className="text-lg font-normal text-gray-900 mt-1">$0.00</p>
           </div>
         </div>
 
         {/* QUICK ACTIONS */}
-        <div className=" bg-white px-6 py-4 flex justify-between text-[var(--client-brand)] text-sm">
+        <div className="bg-white px-6 py-4 flex justify-between text-[var(--client-brand)] text-sm">
           <div className="flex items-center gap-2 cursor-pointer hover:underline">
             <FileText size={18} />
             View <br /> Statements
           </div>
-
           <div className="flex items-center gap-2 cursor-pointer hover:underline">
             <Bell size={18} />
             Set Up <br /> Alerts
           </div>
-
           <div className="flex items-center gap-2 cursor-pointer hover:underline">
             <Receipt size={18} />
             Pay <br /> Bills
           </div>
-
           <div className="flex items-center gap-2 cursor-pointer hover:underline">
             <Repeat size={18} />
             Transfer <br /> Funds
           </div>
-
           <div className="flex items-center gap-2 cursor-pointer hover:underline">
             <Send size={18} />
             Interac e- <br />
@@ -365,7 +364,6 @@ export default function LeftAccountPanel() {
       {/* TRANSACTIONS HEADER */}
       <div className="flex justify-between items-center text-base text-gray-600">
         <p>Transactions as of {today}</p>
-
         <button className="flex items-center gap-2 text-brand">
           <Download size={18} />
           Download
@@ -380,14 +378,12 @@ export default function LeftAccountPanel() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1 border p-3 text-sm"
         />
-
         <button
           onClick={applyFiltersAndSearch}
           className="bg-brand hover:bg-brand-hover text-white px-6"
         >
           Search
         </button>
-
         <button
           onClick={() => setShowFilter(true)}
           className="border border-brand text-brand px-6 flex items-center gap-2"
@@ -397,16 +393,54 @@ export default function LeftAccountPanel() {
         </button>
       </div>
 
-      {/* RESULTS INFO */}
-      <div className="flex items-center gap-6 text-gray-600 text-sm mt-4">
-        <p>
-          We found {filteredTransactions.length}{" "}
-          {filteredTransactions.length === 1 ? "result" : "results"}.
-        </p>
+      {/* RESULTS INFO + QUICK DATE FILTERS */}
+      <div className="flex items-center justify-between text-gray-600 text-sm mt-4">
 
-        <button onClick={clearAllFilters} className="text-brand underline">
-          Reset
-        </button>
+        {/* LEFT: count + reset */}
+        <div className="flex items-center gap-6">
+          <p>
+            We found {filteredTransactions.length}{" "}
+            {filteredTransactions.length === 1 ? "result" : "results"}.
+          </p>
+          <button onClick={clearAllFilters} className="text-brand underline">
+            Reset
+          </button>
+        </div>
+
+        {/* RIGHT: 14 days / 30 days / Last Month */}
+        <div className="flex items-center gap-3">
+          <span className="text-gray-500">Display:</span>
+          <button
+            onClick={() => applyQuickFilter("14")}
+            className={
+              activeFilter === "14"
+                ? "font-bold text-brand underline"
+                : "text-brand hover:underline"
+            }
+          >
+            14 days
+          </button>
+          <button
+            onClick={() => applyQuickFilter("30")}
+            className={
+              activeFilter === "30"
+                ? "font-bold text-black"
+                : "text-brand hover:underline"
+            }
+          >
+            30 days
+          </button>
+          <button
+            onClick={() => applyQuickFilter("lastMonth")}
+            className={
+              activeFilter === "lastMonth"
+                ? "font-bold text-brand underline"
+                : "text-brand hover:underline"
+            }
+          >
+            Last Month
+          </button>
+        </div>
       </div>
 
       <p className="text-gray-600 text-sm mt-2">
@@ -430,15 +464,11 @@ export default function LeftAccountPanel() {
             className="grid grid-cols-5 border-b border-gray-200 py-4 px-3 text-gray-600 text-sm items-center hover:bg-gray-50"
           >
             <p>{formatDate(tx.date)}</p>
-
             <p>{tx.description}</p>
-
             <p>{tx.debit ? `-$${formatMoney(tx.debit)}` : ""}</p>
-
             <p className="text-green-600">
               {tx.credit ? `$${formatMoney(tx.credit)}` : ""}
             </p>
-
             <p className="text-right">${formatMoney(tx.balance_after)}</p>
           </div>
         ))}
@@ -451,7 +481,6 @@ export default function LeftAccountPanel() {
           {filteredTransactions.length}{" "}
           {filteredTransactions.length === 1 ? "transaction" : "transactions"}
         </p>
-
         {visibleCount < filteredTransactions.length && (
           <button
             onClick={() => setVisibleCount((prev) => prev + 50)}
