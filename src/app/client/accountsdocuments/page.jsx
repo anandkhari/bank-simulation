@@ -164,14 +164,15 @@ export default function AccountDocuments() {
     }
   };
 
-  // ── DOWNLOAD — extract filename directly from the URL ───────
-  const handleDownload = (url) => {
+const handleDownload = (url) => {
   const filename = url.split("/").pop();
   const link = document.createElement("a");
   link.href = url;
-  link.download = filename || "statement.pdf";
-  link.target = "_blank"; // fallback if download attribute is blocked
+  link.download = filename;
+  link.target = "_blank";
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 };
 
   const formatDate = (dateStr) => {
