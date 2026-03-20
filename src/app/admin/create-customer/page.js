@@ -142,23 +142,23 @@ export default function CreateCustomerPage() {
             />
           </div>
 
-         <div className="relative">
-  <label className="text-sm text-gray-600">Phone Number</label>
-  <div className="flex mt-1">
-    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-      +1
-    </span>
-    <input
-      type="tel"
-      name="phone"
-      value={form.phone}
-      onChange={handleChange}
-      placeholder="123-456-7890"
-      pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
-      className="flex-1 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 rounded-r-md text-gray-900"
-    />
-  </div>
-</div>
+          <div className="relative">
+            <label className="text-sm text-gray-600">Phone Number</label>
+            <div className="flex mt-1">
+              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                +1
+              </span>
+              <input
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                placeholder="123-456-7890"
+                pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                className="flex-1 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 rounded-r-md text-gray-900"
+              />
+            </div>
+          </div>
 
           {/* Button */}
           <button

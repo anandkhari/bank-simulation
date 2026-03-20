@@ -1,6 +1,7 @@
 "use client";
 
 import { Calendar } from "lucide-react";
+import { useRef } from "react";
 
 export default function FilterDrawer({
   show,
@@ -10,6 +11,9 @@ export default function FilterDrawer({
   onApply,
   onClear,
 }) {
+  const startDateRef = useRef(null);
+  const endDateRef = useRef(null);
+
   return (
     <div
       className={`fixed inset-0 z-50 flex justify-end transition-opacity  duration-800 ${
@@ -87,42 +91,50 @@ export default function FilterDrawer({
         </div>
 
         {/* DATE RANGE */}
-        {/* DATE RANGE */}
-<div className="mb-8">
-  <p className="text-sm font-medium text-gray-600 mb-3">Date Range</p>
 
-  <div className="space-y-4">
-    {/* START DATE */}
-    <div className="relative">
-      <input
-        type="date"
-        value={filters.startDate}
-        onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-      />
-      <div className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition">
-        <span className={filters.startDate ? "text-gray-800" : "text-gray-500"}>
-          {filters.startDate || "YYYY-MM-DD"}
-        </span>
-        <Calendar size={18} className="text-gray-500" />
-      </div>
-    </div>
+        {/* START DATE */}
+<div className="mb-4">
+  <label className="block text-sm font-medium text-gray-600 mb-1">
+    Start Date
+  </label>
+  <div
+    className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition cursor-pointer"
+    onClick={() => startDateRef.current?.showPicker()}
+  >
+    <span className={filters.startDate ? "text-gray-800" : "text-gray-500"}>
+      {filters.startDate || "YYYY-MM-DD"}
+    </span>
+    <Calendar size={18} className="text-gray-500" />
+    <input
+      ref={startDateRef}
+      type="date"
+      value={filters.startDate}
+      onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+      className="absolute w-0 h-0 opacity-0"
+    />
+  </div>
+</div>
 
-    {/* END DATE */}
-    <div className="relative">
-      <input
-        type="date"
-        value={filters.endDate}
-        onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-      />
-      <div className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition">
-        <span className={filters.endDate ? "text-gray-800" : "text-gray-500"}>
-          {filters.endDate || "YYYY-MM-DD"}
-        </span>
-        <Calendar size={18} className="text-gray-500" />
-      </div>
-    </div>
+{/* END DATE */}
+<div className="mb-4">
+  <label className="block text-sm font-medium text-gray-600 mb-1">
+    End Date
+  </label>
+  <div
+    className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition cursor-pointer"
+    onClick={() => endDateRef.current?.showPicker()}
+  >
+    <span className={filters.endDate ? "text-gray-800" : "text-gray-500"}>
+      {filters.endDate || "YYYY-MM-DD"}
+    </span>
+    <Calendar size={18} className="text-gray-500" />
+    <input
+      ref={endDateRef}
+      type="date"
+      value={filters.endDate}
+      onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+      className="absolute w-0 h-0 opacity-0"
+    />
   </div>
 </div>
 

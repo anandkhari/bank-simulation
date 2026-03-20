@@ -38,6 +38,48 @@ export default function LeftAccountPanel() {
     maxAmount: "",
   });
 
+  const downloadCSV = () => {
+  const headers = [
+    "Account Type",
+    "Account Number", 
+    "Transaction Date",
+    "Cheque Number",
+    "Description 1",
+    "Description 2",
+    "CAD$",
+    "USD$",
+  ];
+
+  const rows = filteredTransactions.map((tx) => {
+    const date = new Date(tx.date + "T00:00:00");
+    const formattedDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${date.getFullYear()}`;
+    const cadAmount = tx.credit > 0 ? tx.credit : tx.debit > 0 ? -tx.debit : 0;
+
+    return [
+      "Chequing",
+      account?.account_number || "",
+      formattedDate,
+      "", // Cheque Number
+      `"${(tx.description || "").replace(/"/g, '""')}"`,
+      "", // Description 2
+      cadAmount,
+      "", // USD$
+    ];
+  });
+
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(","))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `transactions-${account?.account_number || "export"}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
   const [userName, setUserName] = useState("");
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -364,7 +406,7 @@ export default function LeftAccountPanel() {
       {/* TRANSACTIONS HEADER */}
       <div className="flex justify-between items-center text-base text-gray-600">
         <p>Transactions as of {today}</p>
-        <button className="flex items-center gap-2 text-brand">
+        <button onClick={downloadCSV} className="flex items-center gap-2 text-brand">
           <Download size={18} />
           Download
         </button>

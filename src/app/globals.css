@@ -12,6 +12,16 @@
   --font-roboto: "Roboto", sans-serif;
 }
 
+/* Hide native password reveal icon in Chrome/Edge */
+input::-ms-reveal,
+input::-ms-clear,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Tailwind Theme Mapping */
 @theme inline {
   --color-background: var(--background);

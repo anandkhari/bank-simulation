@@ -241,7 +241,8 @@ export default function BankingLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onBlur={() => setTouched(true)}
-                    className={`w-full h-[48px] px-[15px] pr-[45px] border bg-white text-base outline-none ${
+                    autoComplete="current-password"
+                    className={`w-full h-[48px] px-[15px] pr-[45px] border bg-white text-base outline-none [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden ${
                       isPasswordError
                         ? "border-[#b91a0e]"
                         : password

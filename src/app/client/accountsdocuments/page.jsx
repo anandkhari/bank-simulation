@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect,useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDown, FileText, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientHeader from "../components/ClientHeader";
@@ -21,6 +21,21 @@ const months = [
   "November",
   "December",
 ];
+
+const MONTH_FILTER_VARIANTS = {
+  January: ["January", "Jan"],
+  February: ["February", "Feb"],
+  March: ["March", "Mar"],
+  April: ["April", "Apr"],
+  May: ["May"],
+  June: ["June", "Jun"],
+  July: ["July", "Jul"],
+  Aug: ["Aug", "August"],
+  September: ["September", "Sep", "Sept"],
+  October: ["October", "Oct"],
+  November: ["November", "Nov"],
+  December: ["December", "Dec"],
+};
 
 export default function AccountDocuments() {
   const [accounts, setAccounts] = useState([]);
@@ -55,7 +70,6 @@ export default function AccountDocuments() {
           .select("name")
           .eq("id", user.id)
           .single();
-
         setUserName(profile?.name);
       }
     };
@@ -100,7 +114,6 @@ export default function AccountDocuments() {
     setStatements([]);
     setSearched(false);
 
-    // Validation
     if (!selectedAccount) {
       setError("Please select an account.");
       return;
@@ -113,15 +126,24 @@ export default function AccountDocuments() {
     setLoading(true);
 
     try {
+      const normalizedYear = String(year).replace(/\D/g, "");
+      const yearFilters = Array.from(
+        new Set(
+          [year, normalizedYear, `${normalizedYear}N`].filter(
+            (value) => Boolean(value) && value !== "Select",
+          ),
+        ),
+      );
+
       let query = supabase
         .from("statements")
         .select("*")
         .eq("account_id", selectedAccount.id)
-        .eq("year", year);
+        .in("year", yearFilters);
 
-      // Only filter by month if not "All Months"
       if (month !== "All Months") {
-        query = query.eq("month", month);
+        const monthFilters = MONTH_FILTER_VARIANTS[month] || [month];
+        query = query.in("month", monthFilters);
       }
 
       const { data, error: fetchError } = await query.order("start_date", {
@@ -142,19 +164,25 @@ export default function AccountDocuments() {
     }
   };
 
-  const handleDownload = async (url, filename) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename || "statement.pdf";
-    link.click();
-    URL.revokeObjectURL(link.href);
+  // ── DOWNLOAD — extract filename directly from the URL ───────
+  const handleDownload = async (url) => {
+    try {
+      const filename = url.split("/").pop(); // e.g. Business_Account_Statement-1222_2025-05-17.pdf
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename || "statement.pdf";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -298,11 +326,8 @@ export default function AccountDocuments() {
 
                     <table className="w-full border-collapse">
                       <thead>
-                        {/* Applied border-t-2 and border-b-2 for the heavy lines. 
-      Using border-gray-900 (or border-black) to match the high-contrast bank style.
-    */}
-                        <tr className="border-t-1 border-b-2 border-gray-600">
-                          <th className="text-left text-[14px] font-semidold text-gray-900 py-5 pr-8">
+                        <tr className="border-t border-b-2 border-gray-600">
+                          <th className="text-left text-[14px] font-semibold text-gray-900 py-5 pr-8">
                             Account
                           </th>
                           <th className="text-left text-[14px] font-semibold text-gray-900 py-5 pr-8">
@@ -332,12 +357,7 @@ export default function AccountDocuments() {
                                   Statement
                                 </span>
                                 <button
-                                  onClick={() =>
-                                    handleDownload(
-                                      stmt.file_url,
-                                      `${stmt.month}_${stmt.year}_statement.pdf`,
-                                    )
-                                  }
+                                  onClick={() => handleDownload(stmt.file_url)}
                                   className="flex items-center cursor-pointer gap-1.5 text-blue-600 hover:underline text-[14px] font-medium w-fit"
                                 >
                                   PDF
@@ -363,12 +383,11 @@ export default function AccountDocuments() {
                         ))}
                       </tbody>
 
-                      {/* Added a footer to close the table with the same heavy line seen in statements */}
                       <tfoot>
                         <tr>
                           <td
                             colSpan={3}
-                            className="border-t-1 border-gray-600 py-2"
+                            className="border-t border-gray-600 py-2"
                           ></td>
                         </tr>
                       </tfoot>
@@ -399,16 +418,14 @@ function Field({ label, children }) {
 /* ── SELECT BOX ────────────────────────────────────────────── */
 function SelectBox({ value, options = [], onChange, renderOption }) {
   const [open, setOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false); // Track direction
+  const [dropUp, setDropUp] = useState(false);
   const containerRef = useRef(null);
 
   const toggleDropdown = () => {
     if (!open && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const dropdownHeight = 240; // This should match your max-h-60 (60 * 4px)
-
-      // If space below is less than dropdown height, drop up
+      const dropdownHeight = 240;
       setDropUp(spaceBelow < dropdownHeight);
     }
     setOpen(!open);
@@ -430,8 +447,8 @@ function SelectBox({ value, options = [], onChange, renderOption }) {
       <div
         className={`absolute left-0 right-0 bg-white border border-gray-300 z-50 shadow-lg transition-all duration-200 ease-out 
           ${dropUp ? "bottom-full mb-1 origin-bottom" : "top-full mt-1 origin-top"}
-          ${open 
-            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" 
+          ${open
+            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
             : `opacity-0 ${dropUp ? "translate-y-2" : "-translate-y-2"} scale-95 pointer-events-none`
           }`}
       >

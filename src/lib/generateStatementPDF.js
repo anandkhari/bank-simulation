@@ -1,10 +1,20 @@
 import puppeteer from "puppeteer";
 
+/* ----------------------------- */
+/* Main Export                   */
+/* ----------------------------- */
 export async function generateStatementPDF({
   account,
   statement,
   transactions,
 }) {
+  if (!account) throw new Error("generateStatementPDF: missing account");
+  if (!statement) throw new Error("generateStatementPDF: missing statement");
+  if (!Array.isArray(transactions) || transactions.length === 0)
+    throw new Error(
+      "generateStatementPDF: transactions must be a non-empty array",
+    );
+
   const html = buildHTML({ account, statement, transactions });
 
   const browser = await puppeteer.launch({
@@ -12,18 +22,20 @@ export async function generateStatementPDF({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
 
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
-  });
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+    });
 
-  await browser.close();
-
-  return pdfBuffer;
+    return pdfBuffer;
+  } finally {
+    await browser.close();
+  }
 }
 
 /* ----------------------------- */
@@ -37,6 +49,7 @@ export function buildHTML({ account, statement, transactions }) {
     <html>
     <head>
       <meta charset="UTF-8">
+      <title>Business Account Statement - ${account.account_number || ""}</title>
       <script src="https://cdn.tailwindcss.com"></script>
       <script>
         tailwind.config = {
@@ -52,74 +65,60 @@ export function buildHTML({ account, statement, transactions }) {
       </script>
       <style>
         @page { size: A4; margin: 0; }
-        body { -webkit-print-color-adjust: exact; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .no-split { break-inside: avoid; }
         thead th { font-variant-numeric: tabular-nums; }
         tbody td { font-variant-numeric: tabular-nums; }
+        .text-right { text-align: right; }
       </style>
     </head>
     <body class="bg-[#f0f0f0] flex justify-center py-10">
       <div class="w-[210mm] min-h-[297mm] bg-white shadow-lg flex flex-col">
 
-        <!-- Blue top bar: full width, no padding -->
+        <!-- Blue top bar -->
         <div class="bg-[#005DAA] h-10 w-full"></div>
 
-        <!-- Content area with padding -->
+        <!-- Content area -->
         <div class="p-[10mm]">
 
-          <!-- Header: Left + Right columns -->
+          <!-- Header -->
           <div class="flex justify-between items-start mb-8">
 
-            <!-- LEFT: Logo + Bank address + Reference line + Business address -->
+            <!-- LEFT -->
             <div class="w-[42%]">
-
-              <!-- Logo + Bank address -->
               <div class="flex flex-row gap-2 items-start mb-8">
-                <img src="/rbc-logo.svg" alt="RBC Logo" class="w-[60px] h-auto" />
+               <div class="w-[60px] h-auto">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 39.346668 45.666668"><path d="M34.477 39.696c0 1.476-.606 2.333-1.787 2.787-4.592 1.77-10.03 2.684-15.202 2.684-5.172 0-10.609-.913-15.202-2.684C1.106 42.029.5 41.173.5 39.696V.504h33.977v39.192" fill="#0059b3"/><path d="M34.477 39.696c0 1.476-.606 2.333-1.787 2.787-4.592 1.77-10.03 2.684-15.202 2.684-5.172 0-10.609-.913-15.202-2.684C1.106 42.029.5 41.173.5 39.696V.504h33.977z" fill="none" stroke="#fff" stroke-width=".9999750000000001"/><path d="M9.612 24.387c-4.703-2.936-6.258-4.236-6.39-6.162-.021-.392.067-1.052.231-1.523l-.443-.295a3.9 3.9 0 0 0-.58 1.992c0 1.114.356 1.956.792 2.63.662 1.017 1.357 1.656 3.07 2.94 1.846 1.385 3.104 3.002 3.829 4.693h.262v-1.92c2.495 1.415 4.694 2.748 5.775 5.128h.262c-.424-2.467-1.818-4.368-6.808-7.483M23.418 17.966c-1.03.462-1.738 1.087-2.371 1.987l2.102-.11c.076-.934.198-1.554.27-1.877zm7.578 7.505a4.826 4.826 0 0 0 .385-1.632l-3.073-.174a10.59 10.59 0 0 1-.611 2.221zm-3.325-7.624c.22.592.386 1.166.508 1.718l1.807-.1a5.814 5.814 0 0 0-2.315-1.618zm-.82 1.792a10.56 10.56 0 0 0-.871-2.16 6.815 6.815 0 0 0-.375-.01c-.207 0-.416.027-.618.05-.3.745-.542 1.5-.74 2.264zm1.507.968c.096.77.106 1.492.057 2.159l2.956-.157a5.704 5.704 0 0 0-.553-1.89zm-1.005 2.214a13.225 13.225 0 0 0-.275-2.274l-2.984-.135c-.206.908-.34 1.795-.404 2.603zm.459-6.385l.35-.49-.542-.723.09-.16 1.524.822-.332 1.007c.244.117.47.267.773.467l.983-1.618-2.548-1.332h-5.632l-4.57 2.75c.858.596 1.648 1.24 2.21 1.89 1.224-1.782 3.376-2.92 5.507-2.92.696 0 1.508.075 2.187.307zm-11.27-.16l2.524-1.512a3.818 3.818 0 0 0-1.693-.412c-.87-.013-2.337.387-3.048.495.318.218 1.445.938 2.218 1.429zm.518-5.697c-.895-.196-1.395-.086-1.91.405.253.12.568.186.917.161.503-.035.816-.337.993-.566zm14.22 21.294h-.319c0-1.755-1.609-2.233-3.295-2.233h-5.268c.17.865.25 1.878.117 2.834h-.262c-.488-3.944-2.717-5.899-5.833-7.99v1.795h-.262c-.828-1.852-2.65-3.591-4.372-4.824l-1.403-1.001v1.936h-.262c-.73-1.92-2.057-3.354-3.949-5.06-2.042-1.838-2.867-2.939-3.344-4.205-.29-.766-.372-1.385-.383-2.227-.018-1.505.743-2.865 1.69-3.374v.73c-.47.623-.713 1.41-.714 2.212-.002.738.174 1.56.543 2.261 1.15 2.19 5.024 4.878 7.485 6.528 7.652 5.131 9.179 6.027 10.45 8.75.14.304.282.713.4 1.185 1.105-.17 5.115-.78 5.854-.898.141-.022.438-.06.59-.069.69-.437 1.23-.993 1.704-1.687l-2.933-.228c-.15.337-.3.62-.433.846h-.239c.08-.298.15-.591.21-.881l-.75-.055v-.16l.813-.1c.154-.83.228-1.615.244-2.349l-3.694-.208c-.02.378-.024.735-.011 1.066h-.237c-.078-.369-.14-.735-.188-1.092l-.81-.046v-.247l.77-.042a16.837 16.837 0 0 1-.075-2.673l-2.16-.1c.102.19.207.384.282.592.466 1.304.355 2.832.2 3.534h-.26c-.039-.814-.312-1.81-.571-2.418-.598-1.408-1.939-2.652-4.185-4.096v1.8h-.262c-.748-2.365-2.608-3.68-5.374-5.1-2.281-1.172-2.99-2.583-2.862-4.768l.77.457c.198 2.043 1.768 3.222 3.411 3.21.967-.007 1.873-.136 2.75-.311 1.264-.256 2.433-.474 3.41-.127v-1.207h-.767c-.274.237-.83.513-1.65.525-.9.017-2.604-.502-2.604-2.405 0-1.654 1.4-1.917 2.54-1.917.608 0 1.622-.023 1.965-.043.255-.014.446-.053.57-.176.129-.127.168-.258.198-.426.036-.206.036-.416.036-.77V5.414h-5.28v2.09l-1.997-.76v-.5h.956v-.83H8.67V3.678H7.453c-.65 0-1.397.454-1.449 1.336-.05.845.33 1.556 1.2 1.556h.156v1.012h-.157c-1.524 0-2.673-1.145-2.673-2.665 0-1.583 1.35-2.789 2.98-2.789h2.575v1.737h10.013V6.43c0 .433-.023 1.013-.065 1.38-.03.267-.125.748-.63 1.134-.305.233-.765.326-1.513.33a31.86 31.86 0 0 1-1.805-.064c-1.14-.071-1.464.368-1.51.777-.01.086-.009.17 0 .251.534-.414 1.29-.706 2.15-.436 1.51.475 1.941.518 2.728-.1l.08.176c-.085.132-.237.32-.457.487h.73v3.954l2.272-1.361h6.377l3.14 1.64c.39.206.545.455.606.82.05.305-.028.692-.179.94-.093.154-.826 1.355-1.213 1.996a6.864 6.864 0 0 1 1.815 4.642c0 1.656-.612 3.793-2.602 5.381a3.499 3.499 0 0 1 1.875 1.391l-.618 2.105" fill="#ffdf01"/><path d="M17.687 40.354h-1.206V36.9h1.151c1.582 0 2.19.471 2.19 1.658 0 1.283-.793 1.797-2.135 1.797zm-.096-6.856c.957 0 1.606.207 1.606 1.23 0 1.088-.87 1.389-1.862 1.389h-.854v-2.62h1.11zm1.925 2.914c.856-.14 1.676-.806 1.676-1.814 0-.908-.386-1.907-3.061-1.907h-4.513v.073c.137.042.352.153.493.293.307.3.408.747.423 1.34v6.757h3.74c2.057 0 3.546-.784 3.546-2.582 0-1.462-1.137-2.084-2.304-2.16M6.813 33.498H8.13c1.096 0 1.668.32 1.668 1.486 0 1.039-.749 1.654-1.949 1.654H6.813zm3.474 7.656h2.437l-3.113-3.98c1.248-.333 2.183-1.016 2.183-2.256 0-1.457-.872-2.227-3.15-2.227H3.934v.073c.174.062.368.174.495.299.33.325.427.821.427 1.492v6.6h1.956v-3.752h.713l2.761 3.751M29.725 33.851c.523.297.682.684.685.688.025.028.082.019.082.019l.425-1.448s-.764-.548-2.582-.548c-2.751 0-4.811 1.386-4.811 4.418 0 3.418 2.454 4.305 4.617 4.305 2.012 0 2.802-.64 2.802-.64v-.993s-.71.664-2.235.664c-1.26 0-3.106-.574-3.146-3.384-.037-2.593 1.094-3.44 2.61-3.44.844 0 1.266.198 1.553.359M36.958 42.189h.162c.205 0 .295-.023.36-.08a.334.334 0 0 0 .09-.24c0-.147-.054-.246-.17-.29a.923.923 0 0 0-.269-.035h-.173zm.42-1.027c.423 0 .702.28.702.695 0 .361-.24.653-.53.658.042.04.067.062.096.103.136.171.569.924.569.924h-.564c-.091-.16-.13-.222-.222-.394-.235-.427-.31-.541-.395-.582-.024-.006-.043-.017-.076-.017v.993h-.465v-2.38zm-.142-.497c-.905 0-1.628.754-1.628 1.702s.723 1.712 1.628 1.712c.9 0 1.633-.764 1.633-1.712s-.733-1.702-1.633-1.702zm0 3.825a2.113 2.113 0 0 1-2.114-2.123c0-1.182.953-2.124 2.114-2.124 1.157 0 2.11.942 2.11 2.124a2.112 2.112 0 0 1-2.11 2.123" fill="#fff"/></svg>
+</div>
                 <div class="font-helvetica text-[10px] leading-tight">
                   <strong>ROYAL BANK OF CANADA</strong><br/>
                   P.O. BOX 4047 TERMINAL A<br/>
                   TORONTO ON &nbsp; M5W 1L5
                 </div>
               </div>
-
-            <!-- Reference line -->
-<p class="text-[9px] text-gray-500 tracking-wide font-mono mb-1">
-  RBBDA30000_4780138 E &nbsp; D &nbsp; 03282 &nbsp;&nbsp;&nbsp; 00101
-</p>
-
-<!-- Business name & address -->
-<div class="font-helvetica text-[13px] font-bold leading-snug">
-  <p>1000836779 Ontario Ltd.</p>
-  <p>51 NEWCASTLE CRT</p>
-  <p>KITCHENER ON N2R 0G7</p>
-</div>
-
+              <p class="text-[9px] text-gray-500 tracking-wide font-mono mb-1">
+                RBBDA30000_4780138 E &nbsp; D &nbsp; 03282 &nbsp;&nbsp;&nbsp; 00101
+              </p>
+              <div class="font-helvetica text-[13px] font-bold leading-snug">
+                <p>1000836779 Ontario Ltd.</p>
+                <p>51 NEWCASTLE CRT</p>
+                <p>KITCHENER ON N2R 0G7</p>
+              </div>
             </div>
 
-            <!-- RIGHT: Statement info -->
+            <!-- RIGHT -->
             <div class="w-[40%] font-helvetica text-black text-[13px]">
-
-              <!-- Title -->
               <h1 class="font-serif text-right text-[20px] font-bold mb-14 leading-tight">
                 Business Account Statement
               </h1>
-
-              <!-- Date range -->
-              <p class="font-serif text-end text-[14px] mb-2 leading-tight">
+              <p class="font-serif text-right text-[14px] mb-2 leading-tight">
                 ${formatDate(statement.start_date)} to ${formatDate(statement.end_date)}
               </p>
-
-              <!-- Account number row -->
               <div class="flex justify-between items-baseline py-0.5">
                 <span class="font-serif text-[12px] font-bold">Account number:</span>
                 <span class="font-serif font-bold tracking-wider text-[12px]">${account.account_number || ""}</span>
               </div>
-
-              <!-- Divider -->
               <hr style="border-color: black; border-top-width: 1px;" class="my-1" />
-
-              <!-- How to reach us -->
               <div class="py-0.5">
                 <p class="font-serif text-[12px] font-bold leading-tight">How to reach us:</p>
                 <p class="font-serif text-[10px] leading-tight">Please contact your RBC Banking representative or call</p>
@@ -127,66 +126,49 @@ export function buildHTML({ account, statement, transactions }) {
                 <p class="font-serif text-right text-[12px] leading-tight">(1-800-769-2520)</p>
                 <p class="font-serif text-right text-[10px] leading-tight">www.rbcroyalbank.com/business</p>
               </div>
-
-              <!-- Bottom divider -->
               <hr style="border-color: black; border-top-width: 1px;" class="mt-1" />
-
             </div>
           </div>
 
-          <!-- ── Account Summary Section ── -->
+          <!-- Account Summary -->
           <div class="border-t-2 border-black mb-3 w-[60%]"></div>
-          <!-- ── Account Summary Section ── -->
+          <div class="max-w-[60%] mb-14">
+            <h2 class="font-serif text-[16px] font-bold mb-3">Account Summary for this Period</h2>
+            <p class="font-helvetica text-[10px] font-bold mb-0.5">Royal Business Account &#174;</p>
+            <p class="font-helvetica text-[11px] font-bold leading-tight">Royal Bank of Canada</p>
+            <p class="font-helvetica text-[10px] leading-tight mb-3">29 HURON ST, NEW HAMBURG, ON N3A 1K1</p>
+            <table class="w-full border-collapse table-fixed mb-6">
+              <tbody class="font-helvetica text-[10px]">
+                <tr class="border-b border-gray-300">
+                  <td class="py-1">Opening Balance on ${formatDate(statement.start_date)}</td>
+                  <td class="py-1 text-right">${formatMoney(statement.opening_bal)}</td>
+                </tr>
+                <tr class="border-b border-gray-300">
+                  <td class="py-1">Total deposits &amp; credits (${statement.total_deposit_count ?? ""})</td>
+                  <td class="py-1 text-right">+ ${formatMoney(statement.total_deposits)}</td>
+                </tr>
+                <tr class="border-b-2 border-gray-800">
+                  <td class="py-1">Total cheques &amp; debits (${statement.total_debit_count ?? ""})</td>
+                  <td class="py-1 text-right">- ${formatMoney(Math.abs(statement.total_debits ?? 0))}</td>
+                </tr>
+                <tr>
+                  <td class="py-1 font-bold">Closing balance on ${formatDate(statement.end_date)}</td>
+                  <td class="py-1 font-bold text-right">= ${formatMoney(statement.closing_bal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-<div class="max-w-[60%] mb-14">
-  <h2 class="font-serif text-[16px] font-bold mb-3">Account Summary for this Period</h2>
-
-  <!-- Account type label -->
-  <p class="font-helvetica text-[10px] font-bold mb-0.5">Royal Business Account &#174;</p>
-
-  <!-- Branch name & address -->
-  <p class="font-helvetica text-[11px] font-bold leading-tight">${statement.branch_name || "Royal Bank of Canada"}</p>
-  <p class="font-helvetica text-[10px] leading-tight mb-3">${statement.branch_address || ""}</p>
-
-  <!-- Summary rows -->
-  <table class="w-full border-collapse table-fixed mb-6">
-    <tbody class="font-helvetica text-[10px]">
-
-      <tr class="border-b border-gray-300">
-        <td class="py-1">Opening Balance on ${formatDate(statement.start_date)}</td>
-        <td class="py-1 text-right">${formatMoney(statement.opening_bal)}</td>
-      </tr>
-
-      <tr class="border-b border-gray-300">
-        <td class="py-1">Total deposits &amp; credits (${statement.total_deposit_count || ""})</td>
-        <td class="py-1 text-right">+ ${formatMoney(statement.total_deposits)}</td>
-      </tr>
-
-      <tr class="border-b-2 border-gray-800">
-        <td class="py-1">Total cheques &amp; debits (${statement.total_debit_count || ""})</td>
-        <td class="py-1 text-right">- ${formatMoney(statement.total_debits)}</td>
-      </tr>
-
-      <tr>
-        <td class="py-1 font-bold">Closing balance on ${formatDate(statement.end_date)}</td>
-        <td class="py-1 font-bold text-right">= ${formatMoney(statement.closing_bal)}</td>
-      </tr>
-
-    </tbody>
-  </table>
-</div>
-
-          <!-- ── Account Activity Section ── -->
+          <!-- Account Activity -->
           <div class="border-t-2 border-black mb-3"></div>
-          <h2 class="font-helvetica text-[16px] font-bold  mb-4">Account Activity Details</h2>
-
+          <h2 class="font-helvetica text-[16px] font-bold mb-4">Account Activity Details</h2>
           <table class="w-full border-collapse table-fixed">
             <thead>
-              <tr class=" border-b-2 border-black text-[10px] font-bold">
+              <tr class="border-b-2 border-black text-[10px] font-bold">
                 <th class="font-helvetica w-[12%] py-2 text-left">Date</th>
                 <th class="font-helvetica w-[43%] py-2 text-left">Description</th>
-                <th class="font-helvetica w-[15%] py-2 text-right">Cheques & Debits($)</th>
-                <th class="font-helvetica w-[15%] py-2 text-right">Deposits & Credits($)</th>
+                <th class="font-helvetica w-[15%] py-2 text-right">Cheques &amp; Debits($)</th>
+                <th class="font-helvetica w-[15%] py-2 text-right">Deposits &amp; Credits($)</th>
                 <th class="font-helvetica w-[15%] py-2 text-right">Balance</th>
               </tr>
             </thead>
@@ -208,6 +190,7 @@ export function buildHTML({ account, statement, transactions }) {
     </html>
   `;
 }
+
 /* ----------------------------- */
 /* Transaction Rows Builder      */
 /* ----------------------------- */
@@ -218,14 +201,14 @@ function buildTransactionRows(transactions) {
       const dateLabel = t.date !== lastDate ? formatShortDate(t.date) : "";
       lastDate = t.date;
       return `
-      <tr>
-        <td>${dateLabel}</td>
-        <td>${t.description}</td>
-        <td class="right">${t.debit > 0 ? formatMoney(t.debit) : ""}</td>
-        <td class="right">${t.credit > 0 ? formatMoney(t.credit) : ""}</td>
-        <td class="right">${formatMoney(t.balance_after)}</td>
-      </tr>
-    `;
+        <tr class="border-b border-gray-200">
+          <td class="py-1 font-helvetica text-[10px]">${dateLabel}</td>
+          <td class="py-1 font-helvetica text-[10px]">${t.description ?? ""}</td>
+          <td class="py-1 font-helvetica text-[10px] text-right">${(t.debit ?? 0) > 0 ? formatMoney(t.debit) : ""}</td>
+          <td class="py-1 font-helvetica text-[10px] text-right">${(t.credit ?? 0) > 0 ? formatMoney(t.credit) : ""}</td>
+          <td class="py-1 font-helvetica text-[10px] text-right">${formatMoney(t.balance_after)}</td>
+        </tr>
+      `;
     })
     .join("");
 }
@@ -235,7 +218,7 @@ function buildTransactionRows(transactions) {
 /* ----------------------------- */
 function formatDate(dateStr) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("en-CA", {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-CA", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -244,7 +227,7 @@ function formatDate(dateStr) {
 
 function formatShortDate(dateStr) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("en-CA", {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-CA", {
     day: "numeric",
     month: "short",
   });

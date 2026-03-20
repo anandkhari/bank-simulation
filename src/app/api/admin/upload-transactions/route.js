@@ -2,6 +2,33 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
 import { generateStatementPDF } from "@/lib/generateStatementPDF";
 
+const MONTH_LABELS = {
+  jan: "January",
+  january: "January",
+  feb: "February",
+  february: "February",
+  mar: "March",
+  march: "March",
+  apr: "April",
+  april: "April",
+  may: "May",
+  jun: "June",
+  june: "June",
+  jul: "July",
+  july: "July",
+  aug: "Aug",
+  august: "Aug",
+  sep: "September",
+  sept: "September",
+  september: "September",
+  oct: "October",
+  october: "October",
+  nov: "November",
+  november: "November",
+  dec: "December",
+  december: "December",
+};
+
 function generateFingerprint(date, description, debit, credit) {
   const raw = `${date}${description.toLowerCase().trim()}${debit ?? 0}${credit ?? 0}`;
   return crypto.createHash("sha256").update(raw).digest("hex");
@@ -13,6 +40,43 @@ function recalculateBalances(transactions, openingBalance) {
     running += t.amount;
     return { ...t, balance_after: Number(running.toFixed(2)) };
   });
+}
+
+function normalizeMonthLabel(rawValue) {
+  if (!rawValue) return "";
+  const token = String(rawValue).replace(/[^a-z]/gi, "").toLowerCase();
+  return MONTH_LABELS[token] || "";
+}
+
+function normalizeYearValue(rawValue) {
+  if (!rawValue) return "";
+  const match = String(rawValue).match(/\b(20\d{2})\b/);
+  return match?.[1] || "";
+}
+
+function getStatementMonthYear(sheetName, startDate, endDate) {
+  const tokens = String(sheetName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const monthFromName = normalizeMonthLabel(tokens[0]);
+  const yearFromName = normalizeYearValue(tokens[1]);
+  const monthFromStartDate = startDate
+    ? normalizeMonthLabel(
+        new Date(`${startDate}T00:00:00`).toLocaleDateString("en-US", {
+          month: "long",
+        }),
+      )
+    : "";
+  const yearFromEndDate = endDate
+    ? String(new Date(`${endDate}T00:00:00`).getFullYear())
+    : "";
+
+  return {
+    month: monthFromName || monthFromStartDate,
+    year: yearFromName || yearFromEndDate,
+  };
 }
 
 export async function POST(req) {
@@ -53,6 +117,11 @@ export async function POST(req) {
     }
 
     const user_id = accountData.user_id;
+
+    // Extract last 4 digits of account number for filename
+    const rawAccountNumber = accountData.account_number || "";
+    const digitsOnly = rawAccountNumber.replace(/\D/g, "");
+    const last4 = digitsOnly.slice(-4);
 
     let totalInserted = 0;
     let totalStatements = 0;
@@ -128,6 +197,8 @@ export async function POST(req) {
       const start_date = withBalances[0].date;
       const end_date = withBalances[withBalances.length - 1].date;
       const closing_bal = withBalances[withBalances.length - 1].balance_after;
+      const { month: statementMonth, year: statementYear } =
+        getStatementMonthYear(sheet_name, start_date, end_date);
 
       console.log(
         `[8] Statement details — start: ${start_date} end: ${end_date} closing: ${closing_bal}`,
@@ -138,8 +209,8 @@ export async function POST(req) {
         .insert({
           account_id,
           sheet_name,
-          month: sheet_name.trim().split(" ")[0],
-          year: sheet_name.trim().split(" ")[1],
+          month: statementMonth,
+          year: statementYear,
           start_date,
           end_date,
           opening_bal: opening_balance,
@@ -199,6 +270,12 @@ export async function POST(req) {
         continue;
       }
 
+      // Calculate summary totals for PDF
+      const totalDeposits = withBalances.reduce((sum, t) => sum + (t.credit ?? 0), 0);
+      const totalDebits = withBalances.reduce((sum, t) => sum + (t.debit ?? 0), 0);
+      const totalDepositCount = withBalances.filter(t => (t.credit ?? 0) > 0).length;
+      const totalDebitCount = withBalances.filter(t => (t.debit ?? 0) > 0).length;
+
       let pdfBuffer;
       try {
         pdfBuffer = await generateStatementPDF({
@@ -208,6 +285,10 @@ export async function POST(req) {
             end_date,
             opening_bal: opening_balance,
             closing_bal,
+            total_deposits: totalDeposits,
+            total_debits: totalDebits,
+            total_deposit_count: totalDepositCount,
+            total_debit_count: totalDebitCount,
           },
           transactions: withBalances,
         });
@@ -222,7 +303,9 @@ export async function POST(req) {
         continue;
       }
 
-      const filePath = `${account_id}/${sheet_name}.pdf`;
+      // Build filename: "Business Account Statement-1403 2026-02-19"
+      const fileName = `Business Account Statement-${last4} ${end_date}`;
+      const filePath = `${account_id}/${fileName.replace(/\s+/g, "_")}.pdf`;
 
       const { error: uploadError } = await supabaseAdmin.storage
         .from("statements")

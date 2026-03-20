@@ -8,6 +8,27 @@ export async function POST(req) {
       return Response.json({ error: "Missing account_id" }, { status: 400 });
     }
 
+    // 🔥 DELETE ALL PDF FILES FROM STORAGE BUCKET
+    const { data: fileList, error: listError } = await supabaseAdmin.storage
+      .from("statements")
+      .list(account_id);
+
+    if (listError) {
+      return Response.json({ error: listError.message }, { status: 500 });
+    }
+
+    if (fileList && fileList.length > 0) {
+      const filePaths = fileList.map((file) => `${account_id}/${file.name}`);
+
+      const { error: deleteFilesError } = await supabaseAdmin.storage
+        .from("statements")
+        .remove(filePaths);
+
+      if (deleteFilesError) {
+        return Response.json({ error: deleteFilesError.message }, { status: 500 });
+      }
+    }
+
     // 🔥 DELETE ALL TRANSACTIONS
     const { error } = await supabaseAdmin
       .from("transactions")
@@ -36,7 +57,7 @@ export async function POST(req) {
 
     return Response.json({
       success: true,
-      message: "All transactions and statements deleted",
+      message: "All transactions, statements and files deleted",
     });
   } catch (err) {
     return Response.json({ error: "Server error" }, { status: 500 });
