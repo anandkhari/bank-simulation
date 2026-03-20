@@ -165,20 +165,14 @@ export default function AccountDocuments() {
   };
 
   // ── DOWNLOAD — extract filename directly from the URL ───────
-  const handleDownload = async (url) => {
-    try {
-      const filename = url.split("/").pop(); // e.g. Business_Account_Statement-1222_2025-05-17.pdf
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = filename || "statement.pdf";
-      link.click();
-      URL.revokeObjectURL(link.href);
-    } catch (err) {
-      console.error("Download failed:", err);
-    }
-  };
+  const handleDownload = (url) => {
+  const filename = url.split("/").pop();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename || "statement.pdf";
+  link.target = "_blank"; // fallback if download attribute is blocked
+  link.click();
+};
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
