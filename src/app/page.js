@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-
+import { supabase } from "@/lib/supabaseClient";
 
 function Loader() {
   return (
@@ -13,16 +13,23 @@ function Loader() {
 }
 
 export default function Page() {
-
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/client/login");
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        // Already logged in — go straight to dashboard
+        router.replace("/client/dashboard");
+      } else {
+        // Not logged in — go to login
+        router.replace("/client/login");
+      }
+    };
+
+    checkSession();
   }, [router]);
 
-  return (
-    <div>
-      <Loader />
-    </div>
-  );
+  return <Loader />;
 }

@@ -63,6 +63,22 @@ export default function BankingLogin() {
         return;
       }
 
+      // ── Check role — only allow "client" ──────────────────
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile || profile.role !== "client") {
+        await supabase.auth.signOut();
+        toast.error("Access denied. This portal is for clients only.");
+        setLoading(false);
+        return;
+      }
+
       toast.success("Login successful");
       router.push("/client/success");
     } catch {
@@ -80,7 +96,6 @@ export default function BankingLogin() {
           intro ? "-translate-x-[25%]" : "translate-x-0"
         }`}
       >
-        {/* HERO IMAGE */}
         <Image
           src="/landing.jpg"
           alt="Bank Hero"
@@ -89,21 +104,15 @@ export default function BankingLogin() {
           className="object-cover"
         />
 
-        {/* CENTER CONTENT */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center z-10">
-          {/* LOGO */}
           <Image
-            src="/rbc-logo.svg" // place logo in public folder
+            src="/rbc-logo.svg"
             alt="RBC Logo"
             width={48}
             height={48}
             className="mb-6"
           />
-
-          {/* TITLE */}
-          <h1 className="text-xl  tracking-wide mb-1">Secure Sign-In</h1>
-
-          {/* SUBTITLE */}
+          <h1 className="text-xl tracking-wide mb-1">Secure Sign-In</h1>
           <p className="text-sm text-white/90">RBC Online Banking</p>
         </div>
       </div>
@@ -115,7 +124,6 @@ export default function BankingLogin() {
           intro ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {/* SLIDING RIGHT PANELS */}
         <div className="overflow-hidden relative h-full">
           <div
             className={`flex w-[200%] transition-transform duration-800 ease-out ${
@@ -164,7 +172,6 @@ export default function BankingLogin() {
                     onChange={() => setChecked(!checked)}
                     className="sr-only"
                   />
-
                   <div className="w-[22px] h-[22px] border border-[#006ac3] flex items-center justify-center bg-white">
                     {checked && (
                       <svg
@@ -178,11 +185,9 @@ export default function BankingLogin() {
                       </svg>
                     )}
                   </div>
-
                   <span className="ml-3 text-sm text-[#1f1f1f]">
                     Save client card or username
                   </span>
-
                   <span className="ml-3 w-5 h-5 border border-[#006ac3] text-[#006ac3] text-xs flex items-center justify-center rounded-full">
                     ?
                   </span>
@@ -204,7 +209,6 @@ export default function BankingLogin() {
                   <h3 className="text-[18px] text-[#1f1f1f] mb-4">
                     Service Notices
                   </h3>
-
                   <div className="space-y-4 text-sm text-[#006ac3]">
                     <p>Important Information: Canada Post Service Disruption</p>
                   </div>
@@ -224,7 +228,6 @@ export default function BankingLogin() {
                   >
                     <ChevronLeft size={28} strokeWidth={1} />
                   </button>
-
                   <p className="text-base text-[#1f1f1f]">
                     Signing in with {cardNumber}
                   </p>
@@ -250,7 +253,6 @@ export default function BankingLogin() {
                           : "border-[#6f6f6f]"
                     }`}
                   />
-
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -301,14 +303,11 @@ function Footer() {
           <div className="absolute top-[-4px] w-4 h-[2px] bg-[#006ac3]" />
         </div>
       </div>
-
       <div className="border-t border-[#e5e5e5] mt-6"></div>
-
       <div className="mt-6 text-[#1f1f1f] text-sm leading-6">
         <p>RBC Online Banking is provided by Royal Bank of Canada.</p>
         <p>Royal Bank of Canada Website, © 1995-2026</p>
       </div>
-
       <div className="flex flex-wrap gap-x-6 gap-y-3 mt-4 text-[#006ac3] text-sm">
         <span>Legal ↗</span>
         <span>Accessibility ↗</span>
