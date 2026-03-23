@@ -82,13 +82,11 @@ function getStatementMonthYear(sheetName, startDate, endDate) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { account_id, sheets } = body;
+    // 1. Destructure the new is_manual flag
+    const { account_id, sheets, is_manual } = body;
 
     console.log(
-      "[1] Payload received — account_id:",
-      account_id,
-      "sheets count:",
-      sheets?.length,
+      `[1] Payload received — account_id: ${account_id} | sheets count: ${sheets?.length} | is_manual: ${!!is_manual}`
     );
 
     if (!account_id) {
@@ -101,24 +99,15 @@ export async function POST(req) {
 
     const { data: accountData, error: accountError } = await supabaseAdmin
       .from("accounts")
-      .select("id, user_id, account_name, account_number, address")
+      .select("id, user_id, account_name, account_number, address, balance") // Fetched balance just in case
       .eq("id", account_id)
       .single();
-
-    console.log(
-      "[2] Account fetch — error:",
-      accountError,
-      "data:",
-      accountData,
-    );
 
     if (accountError || !accountData) {
       return Response.json({ error: "Account not found" }, { status: 404 });
     }
 
     const user_id = accountData.user_id;
-
-    // Extract last 4 digits of account number for filename
     const rawAccountNumber = accountData.account_number || "";
     const digitsOnly = rawAccountNumber.replace(/\D/g, "");
     const last4 = digitsOnly.slice(-4);
@@ -131,239 +120,155 @@ export async function POST(req) {
     for (const sheet of sheets) {
       const { sheet_name, opening_balance, transactions } = sheet;
 
-      console.log(
-        `[3] Processing sheet: ${sheet_name} — transactions: ${transactions?.length} — opening_balance: ${opening_balance}`,
-      );
-
-      if (!transactions || transactions.length === 0) {
-        console.log(`[3a] Skipping ${sheet_name} — no transactions`);
-        continue;
-      }
+      if (!transactions || transactions.length === 0) continue;
 
       const withFingerprints = transactions.map((t) => ({
         ...t,
-        fingerprint: generateFingerprint(
-          t.date,
-          t.description,
-          t.debit,
-          t.credit,
-        ),
+        fingerprint: generateFingerprint(t.date, t.description, t.debit, t.credit),
       }));
-
-      console.log(
-        `[4] Fingerprints generated for ${sheet_name} — count: ${withFingerprints.length}`,
-      );
 
       const fingerprints = withFingerprints.map((t) => t.fingerprint);
 
-      const { data: existingRows, error: fingerprintError } =
-        await supabaseAdmin
-          .from("transactions")
-          .select("fingerprint")
-          .eq("account_id", account_id)
-          .in("fingerprint", fingerprints);
+      const { data: existingRows } = await supabaseAdmin
+        .from("transactions")
+        .select("fingerprint")
+        .eq("account_id", account_id)
+        .in("fingerprint", fingerprints);
 
-      console.log(
-        `[5] Duplicate check for ${sheet_name} — existing: ${existingRows?.length} — error: ${fingerprintError?.message}`,
-      );
-
-      const existingFingerprints = new Set(
-        (existingRows || []).map((r) => r.fingerprint),
-      );
-
+      const existingFingerprints = new Set((existingRows || []).map((r) => r.fingerprint));
       const newTransactions = withFingerprints.filter(
-        (t) => !existingFingerprints.has(t.fingerprint),
+        (t) => !existingFingerprints.has(t.fingerprint)
       );
 
-      console.log(
-        `[6] New transactions after dedup for ${sheet_name}: ${newTransactions.length}`,
-      );
+      if (newTransactions.length === 0) continue;
 
-      if (newTransactions.length === 0) {
-        console.log(
-          `[6a] All transactions already exist for ${sheet_name}, skipping.`,
-        );
-        continue;
-      }
-
-      const sorted = newTransactions.sort(
-        (a, b) => new Date(a.date) - new Date(b.date),
-      );
-
+      const sorted = newTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
       const withBalances = recalculateBalances(sorted, opening_balance);
-
-      console.log(`[7] Balances recalculated for ${sheet_name}`);
 
       const start_date = withBalances[0].date;
       const end_date = withBalances[withBalances.length - 1].date;
       const closing_bal = withBalances[withBalances.length - 1].balance_after;
-      const { month: statementMonth, year: statementYear } =
-        getStatementMonthYear(sheet_name, start_date, end_date);
 
-      console.log(
-        `[8] Statement details — start: ${start_date} end: ${end_date} closing: ${closing_bal}`,
-      );
+      let statement_id = null;
 
-      const { data: statementData, error: statementError } = await supabaseAdmin
-        .from("statements")
-        .insert({
-          account_id,
+      // 2. Bypass Statement Creation if Manual
+      if (!is_manual) {
+        const { month: statementMonth, year: statementYear } = getStatementMonthYear(
           sheet_name,
-          month: statementMonth,
-          year: statementYear,
           start_date,
-          end_date,
-          opening_bal: opening_balance,
-          closing_bal,
-          file_url: "",
-        })
-        .select("id")
-        .single();
-
-      console.log(
-        `[9] Statement insert for ${sheet_name} — error: ${statementError?.message} — id: ${statementData?.id}`,
-      );
-
-      if (statementError) {
-        console.error(
-          `[9a] Statement insert failed for ${sheet_name}:`,
-          statementError,
+          end_date
         );
-        continue;
+
+        const { data: statementData, error: statementError } = await supabaseAdmin
+          .from("statements")
+          .insert({
+            account_id,
+            sheet_name,
+            month: statementMonth,
+            year: statementYear,
+            start_date,
+            end_date,
+            opening_bal: opening_balance,
+            closing_bal,
+            file_url: "",
+          })
+          .select("id")
+          .single();
+
+        if (statementError) {
+          console.error(`[9a] Statement insert failed:`, statementError);
+          continue;
+        }
+        statement_id = statementData.id;
       }
 
-      const statement_id = statementData.id;
-
+      // 3. Insert Transactions (statement_id will safely be null for manual entries)
       const records = withBalances.map((t) => ({
         user_id,
         account_id,
-        statement_id,
+        statement_id, // Null if is_manual
         date: t.date,
         description: t.description,
         debit: t.debit ?? null,
         credit: t.credit ?? null,
         amount: t.amount,
         type: t.type,
-        balance_after: t.balance_after,
+        balance_after: is_manual ? null : t.balance_after, // Don't save inaccurate running balances for single entries
         fingerprint: t.fingerprint,
-        source: "excel_import",
+        source: is_manual ? "manual_entry" : "excel_import", // Hardcoded source override
       }));
 
-      console.log(
-        `[10] Inserting ${records.length} transactions for ${sheet_name}`,
-      );
-
-      const { error: insertError } = await supabaseAdmin
-        .from("transactions")
-        .insert(records);
-
-      console.log(
-        `[11] Transaction insert for ${sheet_name} — error: ${insertError?.message}`,
-      );
+      const { error: insertError } = await supabaseAdmin.from("transactions").insert(records);
 
       if (insertError) {
-        console.error(
-          `[11a] Transaction insert failed for ${sheet_name}:`,
-          insertError,
-        );
-        await supabaseAdmin.from("statements").delete().eq("id", statement_id);
+        console.error(`[11a] Transaction insert failed:`, insertError);
+        if (!is_manual && statement_id) {
+          await supabaseAdmin.from("statements").delete().eq("id", statement_id);
+        }
         continue;
       }
-
-      // Calculate summary totals for PDF
-      const totalDeposits = withBalances.reduce((sum, t) => sum + (t.credit ?? 0), 0);
-      const totalDebits = withBalances.reduce((sum, t) => sum + (t.debit ?? 0), 0);
-      const totalDepositCount = withBalances.filter(t => (t.credit ?? 0) > 0).length;
-      const totalDebitCount = withBalances.filter(t => (t.debit ?? 0) > 0).length;
-
-      let pdfBuffer;
-      try {
-        pdfBuffer = await generateStatementPDF({
-          account: accountData,
-          statement: {
-            start_date,
-            end_date,
-            opening_bal: opening_balance,
-            closing_bal,
-            total_deposits: totalDeposits,
-            total_debits: totalDebits,
-            total_deposit_count: totalDepositCount,
-            total_debit_count: totalDebitCount,
-          },
-          transactions: withBalances,
-        });
-        console.log(`[12] PDF generated for ${sheet_name}`);
-      } catch (pdfError) {
-        console.error(
-          `[12a] PDF generation failed for ${sheet_name}:`,
-          pdfError,
-        );
-        totalInserted += records.length;
-        totalStatements += 1;
-        continue;
-      }
-
-      // Build filename: "Business Account Statement-1403 2026-02-19"
-      const fileName = `Business Account Statement-${last4} ${end_date}`;
-      const filePath = `${account_id}/${fileName.replace(/\s+/g, "_")}.pdf`;
-
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("statements")
-        .upload(filePath, pdfBuffer, {
-          contentType: "application/pdf",
-          upsert: true,
-        });
-
-      console.log(
-        `[13] PDF upload for ${sheet_name} — error: ${uploadError?.message}`,
-      );
-
-      if (uploadError) {
-        console.error(
-          `[13a] PDF upload failed for ${sheet_name}:`,
-          uploadError,
-        );
-        totalInserted += records.length;
-        totalStatements += 1;
-        continue;
-      }
-
-      const { data: urlData } = supabaseAdmin.storage
-        .from("statements")
-        .getPublicUrl(filePath);
-
-      await supabaseAdmin
-        .from("statements")
-        .update({ file_url: urlData.publicUrl })
-        .eq("id", statement_id);
-
-      console.log(
-        `[14] file_url updated for ${sheet_name}: ${urlData.publicUrl}`,
-      );
 
       totalInserted += records.length;
-      totalStatements += 1;
 
-      if (!latestEndDate || end_date > latestEndDate) {
-        latestEndDate = end_date;
-        latestClosingBalance = closing_bal;
+      // 4. Bypass PDF Generation & Upload if Manual
+      if (!is_manual) {
+        totalStatements += 1;
+        const totalDeposits = withBalances.reduce((sum, t) => sum + (t.credit ?? 0), 0);
+        const totalDebits = withBalances.reduce((sum, t) => sum + (t.debit ?? 0), 0);
+        const totalDepositCount = withBalances.filter((t) => (t.credit ?? 0) > 0).length;
+        const totalDebitCount = withBalances.filter((t) => (t.debit ?? 0) > 0).length;
+
+        try {
+          const pdfBuffer = await generateStatementPDF({
+            account: accountData,
+            statement: { start_date, end_date, opening_bal: opening_balance, closing_bal, total_deposits: totalDeposits, total_debits: totalDebits, total_deposit_count: totalDepositCount, total_debit_count: totalDebitCount },
+            transactions: withBalances,
+          });
+
+          const fileName = `Business Account Statement-${last4} ${end_date}`;
+          const filePath = `${account_id}/${fileName.replace(/\s+/g, "_")}.pdf`;
+
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from("statements")
+            .upload(filePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+
+          if (!uploadError) {
+            const { data: urlData } = supabaseAdmin.storage.from("statements").getPublicUrl(filePath);
+            await supabaseAdmin.from("statements").update({ file_url: urlData.publicUrl }).eq("id", statement_id);
+          }
+        } catch (pdfError) {
+          console.error(`[12a] PDF generation/upload failed:`, pdfError);
+        }
+
+        // Only track latest balances for bulk statements
+        if (!latestEndDate || end_date > latestEndDate) {
+          latestEndDate = end_date;
+          latestClosingBalance = closing_bal;
+        }
+      } else {
+        // 5. Safely increment the account balance for manual transactions instead of overwriting it
+        const totalManualAmount = sorted.reduce((sum, t) => sum + t.amount, 0);
+        const newAccountBalance = (accountData.balance || 0) + totalManualAmount;
+        
+        await supabaseAdmin
+          .from("accounts")
+          .update({ balance: newAccountBalance })
+          .eq("id", account_id);
+        console.log(`[15] Manual entry: accounts.balance incremented to ${newAccountBalance}`);
       }
     }
 
-    if (latestClosingBalance !== null) {
+    // 6. Bulk Statement Account Balance Overwrite (Unchanged)
+    if (!is_manual && latestClosingBalance !== null) {
       await supabaseAdmin
         .from("accounts")
         .update({ balance: latestClosingBalance })
         .eq("id", account_id);
-      console.log(`[15] accounts.balance updated to ${latestClosingBalance}`);
+      console.log(`[15] Bulk entry: accounts.balance updated to ${latestClosingBalance}`);
     }
 
-    console.log(
-      `[16] Done — totalInserted: ${totalInserted} totalStatements: ${totalStatements}`,
-    );
-
     return Response.json({
-      message: "Statement imported successfully",
+      message: is_manual ? "Manual transaction saved" : "Statement imported successfully",
       count: totalInserted,
       statements: totalStatements,
     });

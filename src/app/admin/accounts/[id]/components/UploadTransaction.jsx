@@ -10,8 +10,6 @@ const EMPTY_FORM = {
   description: "",
   type: "credit",
   amount: "",
-  balance_after: "",
-  source: "manual_entry",
 };
 
 export default function UploadTransaction({ accountId, onUploadSuccess }) {
@@ -259,36 +257,34 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     const amount = Number(Number(form.amount).toFixed(2));
     const signedAmount = form.type === "credit" ? amount : -amount;
 
-    const transaction = {
-      date: form.date,
-      description: form.description.trim(),
-      type: form.type,
-      debit: form.type === "debit" ? amount : 0,
-      credit: form.type === "credit" ? amount : 0,
-      amount: signedAmount,
-      balance_after: form.balance_after
-        ? Number(Number(form.balance_after).toFixed(2))
-        : null,
-      source: form.source,
-    };
+  const transaction = {
+    date: form.date,
+    description: form.description.trim(),
+    type: form.type,
+    debit: form.type === "debit" ? amount : 0,
+    credit: form.type === "credit" ? amount : 0,
+    amount: signedAmount,
+    // Removed balance_after and source
+  };
 
     try {
-      setSubmitting(true);
+    setSubmitting(true);
 
-      const response = await fetch("/api/admin/upload-transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          account_id: accountId,
-          sheets: [
-            {
-              sheet_name: "manual",
-              opening_balance: null,
-              transactions: [transaction],
-            },
-          ],
-        }),
-      });
+    const response = await fetch("/api/admin/upload-transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        account_id: accountId,
+        is_manual: true, // <-- This tells the backend to skip the PDF/statement generation
+        sheets: [
+          {
+            sheet_name: "manual",
+            opening_balance: null,
+            transactions: [transaction],
+          },
+        ],
+      }),
+    });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Failed to save");
@@ -427,35 +423,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
             />
           </div>
 
-          {/* Balance after + Source */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">
-                Balance after (optional)
-              </label>
-              <input
-                type="number"
-                value={form.balance_after}
-                onChange={set("balance_after")}
-                placeholder="0.00"
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Source</label>
-              <select
-                value={form.source}
-                onChange={set("source")}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
-              >
-                <option value="manual_entry">Manual entry</option>
-                <option value="bank_transfer">Bank transfer</option>
-                <option value="cash">Cash</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
+          
 
           {/* Cancel + Save */}
           <div className="flex gap-2 pt-1">

@@ -93,50 +93,58 @@ export default function FilterDrawer({
         {/* DATE RANGE */}
 
         {/* START DATE */}
-<div className="mb-4">
-  <label className="block text-sm font-medium text-gray-600 mb-1">
-    Start Date
-  </label>
-  <div
-    className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition cursor-pointer"
-    onClick={() => startDateRef.current?.showPicker()}
-  >
-    <span className={filters.startDate ? "text-gray-800" : "text-gray-500"}>
-      {filters.startDate || "YYYY-MM-DD"}
-    </span>
-    <Calendar size={18} className="text-gray-500" />
-    <input
-      ref={startDateRef}
-      type="date"
-      value={filters.startDate}
-      onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-      className="absolute w-0 h-0 opacity-0"
-    />
-  </div>
-</div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            Start Date
+          </label>
+          <div
+            className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition cursor-pointer"
+            onClick={() => startDateRef.current?.showPicker()}
+          >
+            <span
+              className={filters.startDate ? "text-gray-800" : "text-gray-500"}
+            >
+              {filters.startDate || "YYYY-MM-DD"}
+            </span>
+            <Calendar size={18} className="text-gray-500" />
+            <input
+              ref={startDateRef}
+              type="date"
+              value={filters.startDate}
+              onChange={(e) =>
+                setFilters({ ...filters, startDate: e.target.value })
+              }
+              className="absolute w-0 h-0 opacity-0"
+            />
+          </div>
+        </div>
 
-{/* END DATE */}
-<div className="mb-4">
-  <label className="block text-sm font-medium text-gray-600 mb-1">
-    End Date
-  </label>
-  <div
-    className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition cursor-pointer"
-    onClick={() => endDateRef.current?.showPicker()}
-  >
-    <span className={filters.endDate ? "text-gray-800" : "text-gray-500"}>
-      {filters.endDate || "YYYY-MM-DD"}
-    </span>
-    <Calendar size={18} className="text-gray-500" />
-    <input
-      ref={endDateRef}
-      type="date"
-      value={filters.endDate}
-      onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-      className="absolute w-0 h-0 opacity-0"
-    />
-  </div>
-</div>
+        {/* END DATE */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            End Date
+          </label>
+          <div
+            className="border border-gray-400 p-3 text-sm rounded-lg bg-white flex justify-between items-center hover:border-gray-600 transition cursor-pointer"
+            onClick={() => endDateRef.current?.showPicker()}
+          >
+            <span
+              className={filters.endDate ? "text-gray-800" : "text-gray-500"}
+            >
+              {filters.endDate || "YYYY-MM-DD"}
+            </span>
+            <Calendar size={18} className="text-gray-500" />
+            <input
+              ref={endDateRef}
+              type="date"
+              value={filters.endDate}
+              onChange={(e) =>
+                setFilters({ ...filters, endDate: e.target.value })
+              }
+              className="absolute w-0 h-0 opacity-0"
+            />
+          </div>
+        </div>
 
         {/* AMOUNT RANGE */}
         <div className="mb-10">
