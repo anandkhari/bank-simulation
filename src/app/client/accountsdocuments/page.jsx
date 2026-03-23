@@ -349,7 +349,7 @@ export default function AccountDocuments() {
                               {userName}
                             </td>
                             <td className="py-5 pr-8 text-[14px] text-gray-700">
-                              {formatDate(stmt.start_date)}
+                              {formatDate(stmt.end_date)}
                             </td>
                             <td className="py-5">
                               <div className="flex flex-col gap-1">

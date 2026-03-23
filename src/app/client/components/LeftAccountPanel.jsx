@@ -24,10 +24,11 @@ export default function LeftAccountPanel() {
   const [account, setAccount] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilter, setShowFilter] = useState(false);
-  const [activeFilter, setActiveFilter] = useState(null);
+  const [activeFilter, setActiveFilter] = useState("14");
   const router = useRouter();
 
   const [filters, setFilters] = useState({
@@ -98,6 +99,7 @@ export default function LeftAccountPanel() {
 
       if (accountData) setAccount(accountData);
 
+      setTransactionsLoading(true);
       const { data: txData } = await supabase
         .from("transactions")
         .select("*")
@@ -106,8 +108,9 @@ export default function LeftAccountPanel() {
 
       if (txData) {
         setTransactions(txData);
-        setFilteredTransactions(txData);
+        setFilteredTransactions(getQuickFilteredTransactions(txData, "14"));
       }
+      setTransactionsLoading(false);
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session) {
@@ -133,11 +136,9 @@ export default function LeftAccountPanel() {
 
   const formatMoney = (amount) => Number(amount).toFixed(2);
 
-  // ── QUICK DATE FILTER (14 days / 30 days / Last Month) ────────
-  const applyQuickFilter = (filter) => {
-    setActiveFilter(filter);
+  const getQuickFilteredTransactions = (list, filter) => {
     const now = new Date();
-    let filtered = [...transactions];
+    let filtered = [...list];
 
     if (filter === "14") {
       const from = new Date();
@@ -163,8 +164,14 @@ export default function LeftAccountPanel() {
       });
     }
 
+    return filtered;
+  };
+
+  // ── QUICK DATE FILTER (14 days / 30 days / Last Month) ────────
+  const applyQuickFilter = (filter) => {
+    setActiveFilter(filter);
     setVisibleCount(50);
-    setFilteredTransactions(filtered);
+    setFilteredTransactions(getQuickFilteredTransactions(transactions, filter));
   };
 
   // ── FILTER DRAWER + SEARCH ────────────────────────────────────
@@ -264,7 +271,7 @@ export default function LeftAccountPanel() {
 
   // ── CLEAR ALL ─────────────────────────────────────────────────
   const clearAllFilters = () => {
-    setActiveFilter(null);
+    setActiveFilter("14");
     setFilters({
       type: "all",
       startDate: "",
@@ -274,7 +281,7 @@ export default function LeftAccountPanel() {
     });
     setSearchTerm("");
     setVisibleCount(50);
-    setFilteredTransactions(transactions);
+    setFilteredTransactions(getQuickFilteredTransactions(transactions, "14"));
   };
 
   if (!account) {
@@ -500,20 +507,26 @@ export default function LeftAccountPanel() {
           <p className="text-right">Balance</p>
         </div>
 
-        {filteredTransactions.slice(0, visibleCount).map((tx) => (
-          <div
-            key={tx.id}
-            className="grid grid-cols-5 border-b border-gray-200 py-4 px-3 text-gray-600 text-sm items-center hover:bg-gray-50"
-          >
-            <p>{formatDate(tx.date)}</p>
-            <p>{tx.description}</p>
-            <p>{tx.debit ? `-$${formatMoney(tx.debit)}` : ""}</p>
-            <p className="text-green-600">
-              {tx.credit ? `$${formatMoney(tx.credit)}` : ""}
-            </p>
-            <p className="text-right">${formatMoney(tx.balance_after)}</p>
+        {transactionsLoading ? (
+          <div className="px-3 py-8 text-sm text-gray-600">
+            Loading transactions...
           </div>
-        ))}
+        ) : (
+          filteredTransactions.slice(0, visibleCount).map((tx) => (
+            <div
+              key={tx.id}
+              className="grid grid-cols-5 border-b border-gray-200 py-4 px-3 text-gray-600 text-sm items-center hover:bg-gray-50"
+            >
+              <p>{formatDate(tx.date)}</p>
+              <p>{tx.description}</p>
+              <p>{tx.debit ? `-$${formatMoney(tx.debit)}` : ""}</p>
+              <p className="text-green-600">
+                {tx.credit ? `$${formatMoney(tx.credit)}` : ""}
+              </p>
+              <p className="text-right">${formatMoney(tx.balance_after)}</p>
+            </div>
+          ))
+        )}
       </div>
 
       {/* SHOW MORE */}

@@ -3,11 +3,23 @@
 import { useState, useRef } from "react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, PlusCircle, ChevronDown, ChevronUp } from "lucide-react";
+
+const EMPTY_FORM = {
+  date: "",
+  description: "",
+  type: "credit",
+  amount: "",
+  balance_after: "",
+  source: "manual_entry",
+};
 
 export default function UploadTransaction({ accountId, onUploadSuccess }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [showManual, setShowManual] = useState(false);
   const fileInputRef = useRef(null);
 
   /* ----------------------------- */
@@ -52,7 +64,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   function validateFile(file) {
     if (!file) throw new Error("No file selected");
 
-    // MIME type check (not just extension)
     const allowedMimes = [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.ms-excel",
@@ -60,7 +71,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     ];
     if (!allowedMimes.includes(file.type)) {
       throw new Error(
-        "Unsupported file format. Please upload an Excel (.xlsx) file.",
+        "Unsupported file format. Please upload an Excel (.xlsx) file."
       );
     }
 
@@ -83,31 +94,24 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       const row = sheetData[rowIndex];
 
       if (!row || !Array.isArray(row)) continue;
-
-      // Row 1 (index 0): merged title header → skip
       if (rowIndex === 0) continue;
 
-      // Row 2 (index 1): Opening Balance row
       if (rowIndex === 1) {
-        openingBalance = parseMoney(row[12]); // Column M
+        openingBalance = parseMoney(row[12]);
         continue;
       }
 
-      // Skip fully empty rows
       if (
         row.every((cell) => cell === null || cell === undefined || cell === "")
       )
         continue;
 
-      // Skip section divider rows (merged empty rows mid-sheet)
       const description = row[2];
       if (!description) continue;
 
-      // Skip any stray "Opening Balance" text rows
       if (String(description).trim().toLowerCase() === "opening balance")
         continue;
 
-      // Date: forward fill from column A
       if (row[0]) {
         const parsedDate = parseExcelDate(row[0]);
         if (parsedDate) currentDate = parsedDate;
@@ -115,14 +119,12 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
       if (!currentDate) continue;
 
-      // Parse amounts
-      const debit = parseMoney(row[6]); // Column G
-      const credit = parseMoney(row[9]); // Column J
-      const balance = parseMoney(row[12]); // Column M
+      const debit = parseMoney(row[6]);
+      const credit = parseMoney(row[9]);
+      const balance = parseMoney(row[12]);
 
       if (debit === null && credit === null) continue;
 
-      // Calculate signed amount and type
       const amount = credit !== null ? credit : -(debit ?? 0);
       const type = credit !== null ? "credit" : "debit";
 
@@ -153,12 +155,10 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     try {
       setUploading(true);
 
-      // Stage 1: Validate file
       validateFile(file);
 
       const buffer = await file.arrayBuffer();
 
-      // Stage 1: Catch corrupt or password-protected files
       let workbook;
       try {
         workbook = XLSX.read(buffer, { type: "array", cellDates: false });
@@ -166,45 +166,44 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         const msg = err?.message?.toLowerCase() || "";
         if (msg.includes("password") || msg.includes("encrypted")) {
           throw new Error(
-            "This file is password protected. Please upload an unprotected version.",
+            "This file is password protected. Please upload an unprotected version."
           );
         }
         throw new Error(
-          "File appears to be corrupt or unreadable. Please check the file and try again.",
+          "File appears to be corrupt or unreadable. Please check the file and try again."
         );
       }
 
-      // Stage 1: Sheet count cap
       if (workbook.SheetNames.length > 20) {
         throw new Error("Too many sheets in this file. Maximum allowed is 20.");
       }
 
       const allSheets = [];
 
-      // Stage 2: Loop through sheets
-for (const sheetName of workbook.SheetNames) {
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) continue;
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) continue;
 
-  const sheetData = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    blankrows: false,
-  });
+        const sheetData = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          blankrows: false,
+        });
 
-  if (!sheetData || sheetData.length < 3) continue;
+        if (!sheetData || sheetData.length < 3) continue;
 
-  const { transactions, openingBalance } = parseSheet(sheetData, sheetName);
+        const { transactions, openingBalance } = parseSheet(
+          sheetData,
+          sheetName
+        );
 
-  if (transactions.length === 0) continue;
+        if (transactions.length === 0) continue;
 
-  allSheets.push({
-    sheet_name: sheetName,
-    opening_balance: openingBalance,
-    transactions,
-  });
-}
-
-    
+        allSheets.push({
+          sheet_name: sheetName,
+          opening_balance: openingBalance,
+          transactions,
+        });
+      }
 
       if (allSheets.length === 0) {
         throw new Error("No valid transactions found in the file.");
@@ -215,11 +214,10 @@ for (const sheetName of workbook.SheetNames) {
         allSheets.map((sheet) => ({
           sheet_name: sheet.sheet_name,
           transaction_count: sheet.transactions.length,
-        })),
+        }))
       );
 
-      // Send to backend API
-     const response = await fetch("/api/admin/upload-transactions",  {
+      const response = await fetch("/api/admin/upload-transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -235,10 +233,9 @@ for (const sheetName of workbook.SheetNames) {
       }
 
       toast.success(
-        `Imported ${result.count} transactions across ${result.statements} statements`,
+        `Imported ${result.count} transactions across ${result.statements} statements`
       );
 
-      // Reset UI
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       onUploadSuccess?.();
@@ -251,11 +248,73 @@ for (const sheetName of workbook.SheetNames) {
   };
 
   /* ----------------------------- */
+  /* Manual Transaction Submit     */
+  /* ----------------------------- */
+  const handleManualSubmit = async () => {
+    if (!form.date) return toast.error("Please select a date");
+    if (!form.description.trim()) return toast.error("Description is required");
+    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
+      return toast.error("Enter a valid amount");
+
+    const amount = Number(Number(form.amount).toFixed(2));
+    const signedAmount = form.type === "credit" ? amount : -amount;
+
+    const transaction = {
+      date: form.date,
+      description: form.description.trim(),
+      type: form.type,
+      debit: form.type === "debit" ? amount : 0,
+      credit: form.type === "credit" ? amount : 0,
+      amount: signedAmount,
+      balance_after: form.balance_after
+        ? Number(Number(form.balance_after).toFixed(2))
+        : null,
+      source: form.source,
+    };
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch("/api/admin/upload-transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account_id: accountId,
+          sheets: [
+            {
+              sheet_name: "manual",
+              opening_balance: null,
+              transactions: [transaction],
+            },
+          ],
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to save");
+
+      toast.success("Transaction saved successfully");
+      setForm(EMPTY_FORM);
+      setShowManual(false);
+      onUploadSuccess?.();
+    } catch (error) {
+      toast.error(error.message || "Failed to save transaction");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const set = (field) => (e) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  /* ----------------------------- */
   /* UI                            */
   /* ----------------------------- */
   return (
     <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-xl">
       <div className="flex flex-col items-center gap-4">
+
+        {/* Drop zone */}
         <div
           onClick={() => fileInputRef.current?.click()}
           className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-brand transition"
@@ -268,7 +327,9 @@ for (const sheetName of workbook.SheetNames) {
             Supports Excel (.xlsx) files only
           </p>
           {file && (
-            <p className="text-sm text-green-600 mt-3">Selected: {file.name}</p>
+            <p className="text-sm text-green-600 mt-3">
+              Selected: {file.name}
+            </p>
           )}
         </div>
 
@@ -288,6 +349,136 @@ for (const sheetName of workbook.SheetNames) {
           {uploading ? "Processing Statement..." : "Upload Statement"}
         </button>
       </div>
+
+      {/* Divider + toggle */}
+      <div className="mt-5 pt-4 border-t border-gray-100">
+        <button
+          onClick={() => setShowManual((v) => !v)}
+          className="flex items-center gap-2 text-sm text-brand hover:text-brand-hover font-medium transition"
+        >
+          <PlusCircle size={16} />
+          Enter manually
+          {showManual ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+      </div>
+
+      {/* Manual form */}
+      {showManual && (
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-3">
+
+          {/* Type toggle */}
+          <div>
+            <p className="text-xs text-gray-500 mb-2">Transaction type</p>
+            <div className="flex gap-2">
+              {["credit", "debit"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setForm((f) => ({ ...f, type: t }))}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${
+                    form.type === t
+                      ? t === "credit"
+                        ? "bg-green-50 text-green-700 border-green-300"
+                        : "bg-red-50 text-red-700 border-red-300"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date + Amount */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Date</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={set("date")}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Amount</label>
+              <input
+                type="number"
+                value={form.amount}
+                onChange={set("amount")}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">
+              Description
+            </label>
+            <input
+              type="text"
+              value={form.description}
+              onChange={set("description")}
+              placeholder="e.g. Salary, rent payment..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
+            />
+          </div>
+
+          {/* Balance after + Source */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">
+                Balance after (optional)
+              </label>
+              <input
+                type="number"
+                value={form.balance_after}
+                onChange={set("balance_after")}
+                placeholder="0.00"
+                step="0.01"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Source</label>
+              <select
+                value={form.source}
+                onChange={set("source")}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
+              >
+                <option value="manual_entry">Manual entry</option>
+                <option value="bank_transfer">Bank transfer</option>
+                <option value="cash">Cash</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Cancel + Save */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={() => {
+                setShowManual(false);
+                setForm(EMPTY_FORM);
+              }}
+              className="flex-1 py-2 rounded-lg text-sm border border-gray-200 text-gray-500 hover:border-gray-400 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleManualSubmit}
+              disabled={submitting}
+              className="flex-1 bg-brand hover:bg-brand-hover text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+            >
+              {submitting ? "Saving..." : "Save Transaction"}
+            </button>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
