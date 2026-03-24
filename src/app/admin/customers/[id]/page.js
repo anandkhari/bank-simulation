@@ -6,6 +6,15 @@ import { Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
+function formatCurrency(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "0.00";
+  return num.toLocaleString("en-CA", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function CustomerProfilePage() {
   const { id } = useParams();
   const router = useRouter();
@@ -320,7 +329,7 @@ export default function CustomerProfilePage() {
 
                 <td className="p-3">{account.account_name}</td>
                 <td className="p-3">{account.account_type}</td>
-                <td className="p-3 font-medium">${account.balance}</td>
+                <td className="p-3 font-medium">${formatCurrency(account.balance)}</td>
 
                 {/* ACTION COLUMN */}
                 <td className="p-3">

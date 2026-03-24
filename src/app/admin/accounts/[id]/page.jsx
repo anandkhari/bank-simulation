@@ -6,6 +6,15 @@ import UploadTransaction from "./components/UploadTransaction";
 import toast from "react-hot-toast";
 import { Trash2, X, ArrowUpDown, ArrowUp, ArrowDown, Filter, CalendarX, Loader2 } from "lucide-react";
 
+function formatCurrency(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "0.00";
+  return num.toLocaleString("en-CA", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function AccountPage() {
   const { id } = useParams();
 
@@ -306,7 +315,7 @@ export default function AccountPage() {
               />
             ) : (
               <p className="text-blue-700 text-xl font-bold">
-                ${account?.balance}
+                ${formatCurrency(account?.balance)}
               </p>
             )}
           </div>
@@ -503,13 +512,13 @@ export default function AccountPage() {
                     {tx.description}
                   </td>
                   <td className="p-4 text-sm text-red-600 font-medium">
-                    {tx.debit ? `-$${tx.debit}` : "—"}
+                    {tx.debit ? `-$${formatCurrency(tx.debit)}` : "—"}
                   </td>
                   <td className="p-4 text-sm text-green-600 font-medium">
-                    {tx.credit ? `+$${tx.credit}` : "—"}
+                    {tx.credit ? `+$${formatCurrency(tx.credit)}` : "—"}
                   </td>
                   <td className="p-4 text-sm font-bold text-gray-900">
-                    ${tx.balance_after}
+                    ${formatCurrency(tx.balance_after)}
                   </td>
                   <td className="p-4 text-right">
                     <input
