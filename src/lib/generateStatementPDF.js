@@ -358,17 +358,17 @@ function StatementDocument({ account, statement, transactions }) {
               <Text style={styles.statementTitle}>
                 Business Account Statement
               </Text>
-              <View style={styles.statementDetails}>
               <Text style={styles.dateRange}>
                 {formatDate(statement.start_date)} to{" "}
                 {formatDate(statement.end_date)}
               </Text>
-              <View style={styles.accountNumberRow}>
-                <Text style={styles.accountNumberLabel}>Account number:</Text>
-                <Text style={styles.accountNumberValue}>
-                  {account.account_number || ""}
-                </Text>
-              </View>
+              <View style={styles.statementDetails}>
+                <View style={styles.accountNumberRow}>
+                  <Text style={styles.accountNumberLabel}>Account number:</Text>
+                  <Text style={styles.accountNumberValue}>
+                   {formatStatementAccountNumber(account.account_number)}
+                  </Text>
+                </View>
               <View style={styles.dividerBlack} />
               <Text style={styles.reachUsTitle}>How to reach us:</Text>
               <Text style={styles.reachUsContactText}>
@@ -559,15 +559,15 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
               <Text style={styles.statementTitle}>
                 Business Account Statement
               </Text>
+              <Text style={styles.dateRange}>
+                {formatDate(statement.start_date)} to{" "}
+                {formatDate(statement.end_date)}
+              </Text>
               <View style={styles.statementDetails}>
-                <Text style={styles.dateRange}>
-                  {formatDate(statement.start_date)} to{" "}
-                  {formatDate(statement.end_date)}
-                </Text>
                 <View style={styles.accountNumberRow}>
                   <Text style={styles.accountNumberLabel}>Account number:</Text>
                   <Text style={styles.accountNumberValue}>
-                    {account.account_number || ""}
+                    {formatStatementAccountNumber(account.account_number)}
                   </Text>
                 </View>
                 <View style={styles.dividerBlack} />
@@ -837,6 +837,21 @@ function formatMoney(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatStatementAccountNumber(value) {
+  if (!value) return "";
+  const raw = String(value).trim();
+  const digits = raw.replace(/\D/g, "");
+
+  // Statement layout expects: 03282 100-140-3
+  if (digits.length === 12) {
+    const transit = digits.slice(0, 5);
+    const account = digits.slice(5); // 7 digits
+    return `${transit} ${account.slice(0, 3)}-${account.slice(3, 6)}-${account.slice(6)}`;
+  }
+
+  return raw;
 }
 
 function chunkArray(items, chunkSize) {
