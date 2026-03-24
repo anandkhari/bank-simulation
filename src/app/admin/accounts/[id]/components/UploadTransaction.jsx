@@ -69,7 +69,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     ];
     if (!allowedMimes.includes(file.type)) {
       throw new Error(
-        "Unsupported file format. Please upload an Excel (.xlsx) file."
+        "Unsupported file format. Please upload an Excel (.xlsx) file.",
       );
     }
 
@@ -164,11 +164,11 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         const msg = err?.message?.toLowerCase() || "";
         if (msg.includes("password") || msg.includes("encrypted")) {
           throw new Error(
-            "This file is password protected. Please upload an unprotected version."
+            "This file is password protected. Please upload an unprotected version.",
           );
         }
         throw new Error(
-          "File appears to be corrupt or unreadable. Please check the file and try again."
+          "File appears to be corrupt or unreadable. Please check the file and try again.",
         );
       }
 
@@ -191,7 +191,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
         const { transactions, openingBalance } = parseSheet(
           sheetData,
-          sheetName
+          sheetName,
         );
 
         if (transactions.length === 0) continue;
@@ -212,7 +212,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         allSheets.map((sheet) => ({
           sheet_name: sheet.sheet_name,
           transaction_count: sheet.transactions.length,
-        }))
+        })),
       );
 
       const response = await fetch("/api/admin/upload-transactions", {
@@ -231,7 +231,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       }
 
       toast.success(
-        `Imported ${result.count} transactions across ${result.statements} statements`
+        `Imported ${result.count} transactions across ${result.statements} statements`,
       );
 
       setFile(null);
@@ -249,13 +249,21 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   /* Manual Transaction Submit     */
   /* ----------------------------- */
   const handleManualSubmit = async () => {
-    if (!form.date) return toast.error("Please select a date");
-    if (!form.description.trim()) return toast.error("Description is required");
-    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
-      return toast.error("Enter a valid amount");
+  if (!form.date) return toast.error("Please select a date");
+  if (!form.description.trim()) return toast.error("Description is required");
+  if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
+    return toast.error("Enter a valid amount");
 
-    const amount = Number(Number(form.amount).toFixed(2));
-    const signedAmount = form.type === "credit" ? amount : -amount;
+  // Fix 2 & 4: Compare as plain strings — no Date object, no timezone issues
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  if (form.date < todayStr) {
+    return toast.error("Transaction date cannot be in the past");
+  }
+
+  const amount = Number(Number(form.amount).toFixed(2));
+  const signedAmount = form.type === "credit" ? amount : -amount;
 
   const transaction = {
     date: form.date,
@@ -264,10 +272,9 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     debit: form.type === "debit" ? amount : 0,
     credit: form.type === "credit" ? amount : 0,
     amount: signedAmount,
-    // Removed balance_after and source
   };
 
-    try {
+  try {
     setSubmitting(true);
 
     const response = await fetch("/api/admin/upload-transactions", {
@@ -275,7 +282,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         account_id: accountId,
-        is_manual: true, // <-- This tells the backend to skip the PDF/statement generation
+        is_manual: true,
         sheets: [
           {
             sheet_name: "manual",
@@ -286,19 +293,19 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       }),
     });
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Failed to save");
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Failed to save");
 
-      toast.success("Transaction saved successfully");
-      setForm(EMPTY_FORM);
-      setShowManual(false);
-      onUploadSuccess?.();
-    } catch (error) {
-      toast.error(error.message || "Failed to save transaction");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    toast.success("Transaction saved successfully");
+    setForm(EMPTY_FORM);
+    setShowManual(false);
+    onUploadSuccess?.();
+  } catch (error) {
+    toast.error(error.message || "Failed to save transaction");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const set = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -309,7 +316,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-xl">
       <div className="flex flex-col items-center gap-4">
-
         {/* Drop zone */}
         <div
           onClick={() => fileInputRef.current?.click()}
@@ -323,9 +329,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
             Supports Excel (.xlsx) files only
           </p>
           {file && (
-            <p className="text-sm text-green-600 mt-3">
-              Selected: {file.name}
-            </p>
+            <p className="text-sm text-green-600 mt-3">Selected: {file.name}</p>
           )}
         </div>
 
@@ -361,7 +365,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       {/* Manual form */}
       {showManual && (
         <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-3">
-
           {/* Type toggle */}
           <div>
             <p className="text-xs text-gray-500 mb-2">Transaction type</p>
@@ -423,8 +426,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
             />
           </div>
 
-          
-
           {/* Cancel + Save */}
           <div className="flex gap-2 pt-1">
             <button
@@ -444,7 +445,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
               {submitting ? "Saving..." : "Save Transaction"}
             </button>
           </div>
-
         </div>
       )}
     </div>

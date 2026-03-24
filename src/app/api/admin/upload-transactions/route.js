@@ -182,20 +182,37 @@ export async function POST(req) {
         statement_id = statementData.id;
       }
 
-      // 3. Insert Transactions (statement_id will safely be null for manual entries)
+      // 3. Fetch true previous balance for Manual Entries
+      let manualBalanceAfter = null;
+
+      if (is_manual) {
+        // Fetch the absolute most recent transaction from the ledger
+        const { data: lastTxs } = await supabaseAdmin
+          .from("transactions")
+          .select("balance_after")
+          .eq("account_id", account_id)
+          .order("date", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1);
+
+        // Use the last transaction's balance, fallback to 0 if it's a brand new account
+        const previousBalance = (lastTxs && lastTxs.length > 0) ? Number(lastTxs[0].balance_after) : 0;
+        manualBalanceAfter = Number((previousBalance + sorted[0].amount).toFixed(2));
+      }
+
       const records = withBalances.map((t) => ({
         user_id,
         account_id,
-        statement_id, // Null if is_manual
+        statement_id,
         date: t.date,
         description: t.description,
         debit: t.debit ?? null,
         credit: t.credit ?? null,
         amount: t.amount,
         type: t.type,
-        balance_after: is_manual ? null : t.balance_after, // Don't save inaccurate running balances for single entries
+        balance_after: is_manual ? manualBalanceAfter : t.balance_after,
         fingerprint: t.fingerprint,
-        source: is_manual ? "manual_entry" : "excel_import", // Hardcoded source override
+        source: is_manual ? "manual_entry" : "excel_import",
       }));
 
       const { error: insertError } = await supabaseAdmin.from("transactions").insert(records);
@@ -246,15 +263,12 @@ export async function POST(req) {
           latestClosingBalance = closing_bal;
         }
       } else {
-        // 5. Safely increment the account balance for manual transactions instead of overwriting it
-        const totalManualAmount = sorted.reduce((sum, t) => sum + t.amount, 0);
-        const newAccountBalance = (accountData.balance || 0) + totalManualAmount;
-        
+        // 5. Update the master account balance using our new, accurate manual balance
         await supabaseAdmin
           .from("accounts")
-          .update({ balance: newAccountBalance })
+          .update({ balance: manualBalanceAfter })
           .eq("id", account_id);
-        console.log(`[15] Manual entry: accounts.balance incremented to ${newAccountBalance}`);
+        console.log(`[15] Manual entry: accounts.balance synced to ${manualBalanceAfter}`);
       }
     }
 

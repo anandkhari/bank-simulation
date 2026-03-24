@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   Document,
   Page,
@@ -35,9 +35,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 10,
     right: 28,
-    fontSize: 8,
+    fontSize: 11,
     fontFamily: "Helvetica",
     color: "#333333",
+    fontWeight:600,
   },
   headerRow: {
     flexDirection: "row",
@@ -79,16 +80,23 @@ const styles = StyleSheet.create({
   },
   refLine: {
     fontSize: 7.5,
-    color: "#888888",
+    color: "#444444",
     fontFamily: "Courier",
     marginBottom: 4,
     marginTop:12,
     letterSpacing: 0.5,
-    fontWeight:600,
+    fontWeight:800,
     
   },
+  refLineCode: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color:'#444444',
+    fontWeight:'600',
+    marginLeft:'20'
+  },
   businessName: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "Helvetica-Bold",
     lineHeight: 1.1,
     letterSpacing:-0.2,
@@ -131,6 +139,12 @@ const styles = StyleSheet.create({
     lineHeight: 1,
     textAlign: "right",
   },
+  trademarkSuperscript: {
+    fontSize: 8,
+    lineHeight: 1,
+    position: "relative",
+    top: -5,
+  },
   reachUsContactText: {
     fontSize: 9.5,
     fontFamily: "Times-Roman",
@@ -150,7 +164,7 @@ const styles = StyleSheet.create({
     width: "60%",
   },
   sectionDividerFull: {
-    borderTopWidth: 1.5,
+    borderTopWidth: 2,
     borderTopColor: "#000000",
     marginBottom: 6,
   },
@@ -159,14 +173,14 @@ const styles = StyleSheet.create({
   summaryAccountType: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
-    marginBottom: 2,
+    marginBottom: 6,
   },
   summaryBranchName: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
     lineHeight: 1.4,
   },
-  summaryBranchAddress: { fontSize: 8, lineHeight: 1.4, marginBottom: 8 },
+  summaryBranchAddress: { fontSize: 8, lineHeight: 1.4, marginBottom: 3 },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -207,62 +221,64 @@ const styles = StyleSheet.create({
   },
   tableHeaderRow: {
     flexDirection: "row",
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
     borderBottomColor: "#000000",
-    paddingBottom: 3,
-    paddingTop: 1,
+    paddingBottom: 4,
+    paddingTop: 2,
     marginBottom: 0,
   },
   tableHeaderCell: { fontSize: 7.5, fontFamily: "Helvetica-Bold" },
+  tableHeaderDebitCell: { paddingRight: 4 },
+  tableHeaderCreditCell: { paddingLeft: 4 },
   openingRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#4d4d4d",
-    borderTopWidth:1,
+    borderTopWidth: 0.5,
     borderTopColor: "#4d4d4d",
     paddingVertical: 2,
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: "#7a7a7a",
     paddingVertical: 4,
   },
   closingFooter: {
-    borderTopWidth: 1.5,
+    borderTopWidth: 0.5,
     borderTopColor: "#000000",
     borderBottomWidth: 1.5,
     borderBottomColor: "#000000",
-    marginTop: 18,
-    paddingTop: 6,
-    paddingBottom: 10,
+    marginTop: 0,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   closingFooterRow: {
     flexDirection: "row",
-    paddingVertical: 4,
+    paddingBottom: 10,
   },
   closingFooterFeesRow: {
     flexDirection: "row",
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: "#7a7a7a",
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 2,
+    paddingTop: 4,
+    paddingBottom: 2,
   },
   closingFooterLabel: {
-    width: "84%",
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
+  
   },
   closingFooterValue: {
-    width: "16%",
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
     textAlign: "right",
   },
-  colDate: { width: "11%" },
-  colDesc: { width: "42%" },
-  colDebit: { width: "16%", textAlign: "right" },
-  colCredit: { width: "15%", textAlign: "right" },
+  colDate: { width: "10%" },
+  colDesc: { width: "38%" },
+  colDebit: { width: "18%", textAlign: "right" },
+  colCredit: { width: "18%", textAlign: "right" },
   colBalance: { width: "16%", textAlign: "right" },
   cellText: { fontSize: 8, fontFamily: "Helvetica" },
   cellTextBold: { fontSize: 8, fontFamily: "Helvetica-Bold" },
@@ -309,7 +325,7 @@ function StatementDocument({ account, statement, transactions }) {
         <View style={styles.topBar} />
 
         <View style={styles.content}>
-          {/* ── Header ── */}
+          {/* â”€â”€ Header â”€â”€ */}
           <View style={styles.headerRow}>
             {/* LEFT */}
             <View style={styles.headerLeft}>
@@ -329,7 +345,8 @@ function StatementDocument({ account, statement, transactions }) {
                 </View>
               </View>
               <Text style={styles.refLine}>
-                RBBDA30000_4780138 E D 03282 00101
+                RBBDA30000_4780138E D 03282{" "}
+                <Text style={styles.refLineCode}>00101</Text>
               </Text>
               <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
               <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
@@ -357,7 +374,9 @@ function StatementDocument({ account, statement, transactions }) {
               <Text style={styles.reachUsContactText}>
                 Please contact your RBC Banking representative or call
               </Text>
-              <Text style={styles.reachUsText}>1-800-Royal®2-0</Text>
+              <Text style={styles.reachUsText}>
+                1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>2-0
+              </Text>
               <Text style={styles.reachUsText}>(1-800-769-2520)</Text>
               <Text style={styles.reachUsWebsiteText}>
                 www.rbcroyalbank.com/business
@@ -367,7 +386,7 @@ function StatementDocument({ account, statement, transactions }) {
             </View>
           </View>
 
-          {/* ── Account Summary ── */}
+          {/* â”€â”€ Account Summary â”€â”€ */}
           <View style={styles.sectionDivider} />
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryTitle}>
@@ -385,7 +404,7 @@ function StatementDocument({ account, statement, transactions }) {
                 Opening Balance on {formatDate(statement.start_date)}
               </Text>
               <Text style={styles.summaryValue}>
-                {formatMoney(statement.opening_bal)}
+                $ {formatMoney(statement.opening_bal)}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -409,12 +428,12 @@ function StatementDocument({ account, statement, transactions }) {
                 Closing balance on {formatDate(statement.end_date)}
               </Text>
               <Text style={styles.summaryValueBold}>
-                = {formatMoney(statement.closing_bal)}
+                = $ {formatMoney(statement.closing_bal)}
               </Text>
             </View>
           </View>
 
-          {/* ── Account Activity ── */}
+          {/* â”€â”€ Account Activity â”€â”€ */}
           <View style={styles.sectionDividerFull} />
           <View style={styles.sectionDividerFull} />
           <Text style={styles.activityTitle}>Account Activity Details</Text>
@@ -424,11 +443,23 @@ function StatementDocument({ account, statement, transactions }) {
             <Text style={[styles.tableHeaderCell, styles.colDesc]}>
               Description
             </Text>
-            <Text style={[styles.tableHeaderCell, styles.colDebit]}>
-              Cheques & Debits($)
+            <Text
+              style={[
+                styles.tableHeaderCell,
+                styles.colDebit,
+                styles.tableHeaderDebitCell,
+              ]}
+            >
+              Cheques & Debits ($)
             </Text>
-            <Text style={[styles.tableHeaderCell, styles.colCredit]}>
-              Deposits & Credits($)
+            <Text
+              style={[
+                styles.tableHeaderCell,
+                styles.colCredit,
+                styles.tableHeaderCreditCell,
+              ]}
+            >
+              Deposits & Credits ($)
             </Text>
             <Text style={[styles.tableHeaderCell, styles.colBalance]}>
               Balance
@@ -516,7 +547,8 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 </View>
               </View>
               <Text style={styles.refLine}>
-                RBBDA30000_4780138 E D 03282 00101
+                RBBDA30000_4780138E D 03282{" "}
+                <Text style={styles.refLineCode}>00101</Text>
               </Text>
               <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
               <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
@@ -543,7 +575,9 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 <Text style={styles.reachUsContactText}>
                   Please contact your RBC Banking representative or call
                 </Text>
-                <Text style={styles.reachUsText}>1-800-Royal®2-0</Text>
+                <Text style={styles.reachUsText}>
+                  1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>2-0
+                </Text>
                 <Text style={styles.reachUsText}>(1-800-769-2520)</Text>
                 <Text style={styles.reachUsWebsiteText}>
                   www.rbcroyalbank.com/business
@@ -570,7 +604,7 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 Opening Balance on {formatDate(statement.start_date)}
               </Text>
               <Text style={styles.summaryValue}>
-                {formatMoney(statement.opening_bal)}
+                ${formatMoney(statement.opening_bal)}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -594,11 +628,12 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 Closing balance on {formatDate(statement.end_date)}
               </Text>
               <Text style={styles.summaryValueBold}>
-                = {formatMoney(statement.closing_bal)}
+                = ${formatMoney(statement.closing_bal)}
               </Text>
             </View>
           </View>
 
+          <View style={styles.sectionDividerFull} />
           <Text style={styles.activityTitle}>Account Activity Details</Text>
           <ActivityTable
             includeOpeningBalance
@@ -660,11 +695,23 @@ function ActivityTable({
       <View style={styles.tableHeaderRow}>
         <Text style={[styles.tableHeaderCell, styles.colDate]}>Date</Text>
         <Text style={[styles.tableHeaderCell, styles.colDesc]}>Description</Text>
-        <Text style={[styles.tableHeaderCell, styles.colDebit]}>
-          Cheques & Debits($)
+        <Text
+          style={[
+            styles.tableHeaderCell,
+            styles.colDebit,
+            styles.tableHeaderDebitCell,
+          ]}
+        >
+          Cheques & Debits ($)
         </Text>
-        <Text style={[styles.tableHeaderCell, styles.colCredit]}>
-          Deposits & Credits($)
+        <Text
+          style={[
+            styles.tableHeaderCell,
+            styles.colCredit,
+            styles.tableHeaderCreditCell,
+          ]}
+        >
+          Deposits & Credits ($)
         </Text>
         <Text style={[styles.tableHeaderCell, styles.colBalance]}>Balance</Text>
       </View>
@@ -715,14 +762,24 @@ function ClosingFooter({ closingBalance }) {
   return (
     <View style={styles.closingFooter}>
       <View style={styles.closingFooterRow}>
-        <Text style={styles.closingFooterLabel}>Closing Balance</Text>
-        <Text style={styles.closingFooterValue}>
+        <Text style={[styles.cellTextBold, styles.colDate]} />
+        <Text style={[styles.closingFooterLabel, styles.colDesc]}>
+          Closing Balance
+        </Text>
+        <Text style={[styles.cellTextBold, styles.colDebit]} />
+        <Text style={[styles.cellTextBold, styles.colCredit]} />
+        <Text style={[styles.closingFooterValue, styles.colBalance]}>
           {formatMoney(closingBalance)}
         </Text>
       </View>
       <View style={styles.closingFooterFeesRow}>
-        <Text style={styles.closingFooterLabel}>Account Fees: $16.95</Text>
-        <Text style={styles.closingFooterValue} />
+        <Text style={[styles.cellTextBold, styles.colDate]} />
+        <Text style={[styles.closingFooterLabel, styles.colDesc]}>
+          Account Fees: $16.95
+        </Text>
+        <Text style={[styles.cellTextBold, styles.colDebit]} />
+        <Text style={[styles.cellTextBold, styles.colCredit]} />
+        <Text style={[styles.closingFooterValue, styles.colBalance]} />
       </View>
     </View>
   );
@@ -791,3 +848,5 @@ function chunkArray(items, chunkSize) {
 
   return chunks;
 }
+
+
