@@ -3,7 +3,9 @@
 import { useState, useRef } from "react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
-import { UploadCloud, PlusCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  UploadCloud, PlusCircle, ChevronDown, ChevronUp, RefreshCw, Loader2 
+} from "lucide-react";
 
 const EMPTY_FORM = {
   date: "",
@@ -16,6 +18,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showManual, setShowManual] = useState(false);
   const fileInputRef = useRef(null);
@@ -207,14 +210,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         throw new Error("No valid transactions found in the file.");
       }
 
-      console.log(
-        "[statement-upload] parsed sheets",
-        allSheets.map((sheet) => ({
-          sheet_name: sheet.sheet_name,
-          transaction_count: sheet.transactions.length,
-        })),
-      );
-
       const response = await fetch("/api/admin/upload-transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -249,63 +244,90 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   /* Manual Transaction Submit     */
   /* ----------------------------- */
   const handleManualSubmit = async () => {
-  if (!form.date) return toast.error("Please select a date");
-  if (!form.description.trim()) return toast.error("Description is required");
-  if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
-    return toast.error("Enter a valid amount");
+    if (!form.date) return toast.error("Please select a date");
+    if (!form.description.trim()) return toast.error("Description is required");
+    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
+      return toast.error("Enter a valid amount");
 
-  // Fix 2 & 4: Compare as plain strings — no Date object, no timezone issues
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-  if (form.date < todayStr) {
-    return toast.error("Transaction date cannot be in the past");
-  }
+    if (form.date < todayStr) {
+      return toast.error("Transaction date cannot be in the past");
+    }
 
-  const amount = Number(Number(form.amount).toFixed(2));
-  const signedAmount = form.type === "credit" ? amount : -amount;
+    const amount = Number(Number(form.amount).toFixed(2));
+    const signedAmount = form.type === "credit" ? amount : -amount;
 
-  const transaction = {
-    date: form.date,
-    description: form.description.trim(),
-    type: form.type,
-    debit: form.type === "debit" ? amount : 0,
-    credit: form.type === "credit" ? amount : 0,
-    amount: signedAmount,
+    const transaction = {
+      date: form.date,
+      description: form.description.trim(),
+      type: form.type,
+      debit: form.type === "debit" ? amount : 0,
+      credit: form.type === "credit" ? amount : 0,
+      amount: signedAmount,
+    };
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch("/api/admin/upload-transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account_id: accountId,
+          is_manual: true,
+          sheets: [
+            {
+              sheet_name: "manual",
+              opening_balance: null,
+              transactions: [transaction],
+            },
+          ],
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to save");
+
+      toast.success("Transaction saved successfully");
+      setForm(EMPTY_FORM);
+      setShowManual(false);
+      onUploadSuccess?.();
+    } catch (error) {
+      toast.error(error.message || "Failed to save transaction");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  try {
-    setSubmitting(true);
-
-    const response = await fetch("/api/admin/upload-transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        account_id: accountId,
-        is_manual: true,
-        sheets: [
-          {
-            sheet_name: "manual",
-            opening_balance: null,
-            transactions: [transaction],
-          },
-        ],
-      }),
-    });
-
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Failed to save");
-
-    toast.success("Transaction saved successfully");
-    setForm(EMPTY_FORM);
-    setShowManual(false);
-    onUploadSuccess?.();
-  } catch (error) {
-    toast.error(error.message || "Failed to save transaction");
-  } finally {
-    setSubmitting(false);
-  }
-};
+  /* ----------------------------- */
+  /* Recalculate Logic             */
+  /* ----------------------------- */
+  const handleRecalculate = async () => {
+    if (!confirm("Scan and fix math errors in running balances?")) return;
+    
+    setIsRecalculating(true);
+    try {
+      const res = await fetch("/api/admin/transactions/recalculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_id: accountId }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success("Balances perfectly synced!");
+        onUploadSuccess?.(); // Refreshes the parent table
+      } else {
+        toast.error(data.error || "Recalculation failed");
+      }
+    } catch (err) {
+      toast.error("Network error while syncing");
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   const set = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -343,15 +365,15 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
         <button
           onClick={handleUpload}
-          disabled={uploading}
+          disabled={uploading || isRecalculating}
           className="bg-brand hover:bg-brand-hover text-white px-6 py-2 rounded-lg transition disabled:opacity-50"
         >
           {uploading ? "Processing Statement..." : "Upload Statement"}
         </button>
       </div>
 
-      {/* Divider + toggle */}
-      <div className="mt-5 pt-4 border-t border-gray-100">
+      {/* Divider + Actions (Manual Toggle & Sync Math) */}
+      <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
         <button
           onClick={() => setShowManual((v) => !v)}
           className="flex items-center gap-2 text-sm text-brand hover:text-brand-hover font-medium transition"
@@ -359,6 +381,20 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
           <PlusCircle size={16} />
           Enter manually
           {showManual ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        <button
+          onClick={handleRecalculate}
+          disabled={isRecalculating || uploading || submitting}
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-purple-600 font-medium transition disabled:opacity-50"
+          title="Recalculate and fix all running balances"
+        >
+          {isRecalculating ? (
+            <Loader2 size={14} className="animate-spin text-purple-600" />
+          ) : (
+            <RefreshCw size={14} />
+          )}
+          {isRecalculating ? "Recalculating..." : "Recalculate"}
         </button>
       </div>
 

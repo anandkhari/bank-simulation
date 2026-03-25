@@ -77,7 +77,7 @@ export default function AccountPage() {
     );
   };
 
-  // --- Filtered + Sorted Transactions (Date Focused) ---
+  // --- Filtered + Sorted Transactions (Date & Time Focused) ---
   const filteredTransactions = useMemo(() => {
     let result = [...transactions];
 
@@ -91,11 +91,20 @@ export default function AccountPage() {
       result = result.filter((tx) => new Date(tx.date) <= to);
     }
 
-    // Sort by Date (Default)
+    // Sort by Date, then break ties with created_at timestamp
     result.sort((a, b) => {
-      const valA = new Date(a.date).getTime();
-      const valB = new Date(b.date).getTime();
-      return sortDir === "asc" ? valA - valB : valB - valA;
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+
+      // If the dates are exactly the same day, break the tie using the exact creation time
+      if (dateA === dateB) {
+        const timeA = new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || 0).getTime();
+        return sortDir === "asc" ? timeA - timeB : timeB - timeA;
+      }
+
+      // Otherwise, just sort by the date normally
+      return sortDir === "asc" ? dateA - dateB : dateB - dateA;
     });
 
     return result;
@@ -109,7 +118,6 @@ export default function AccountPage() {
 
   const isFiltered = dateFrom || dateTo || sortDir !== "desc";
 
-  // ... (handleDeleteAll, handleBulkDelete, handleSave logic remain the same)
   const handleDeleteAll = async () => {
     if (!confirm("⚠️ This will delete ALL transactions permanently. Continue?"))
       return;
@@ -202,7 +210,7 @@ export default function AccountPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8">
-      {/* HEADER ... same as before */}
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-800">
@@ -240,7 +248,7 @@ export default function AccountPage() {
         )}
       </div>
 
-      {/* ACCOUNT CARD ... same as before */}
+      {/* ACCOUNT CARD */}
       <div className="bg-white rounded-xl shadow border border-gray-100 p-5 md:p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="space-y-1">
@@ -457,7 +465,7 @@ export default function AccountPage() {
           </div>
         )}
 
-        {/* TABLE ... headers now just toggles for the sortDir */}
+        {/* TABLE */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[700px]">
             <thead className="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold border-b">
