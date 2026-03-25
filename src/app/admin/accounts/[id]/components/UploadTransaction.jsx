@@ -243,18 +243,14 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   /* ----------------------------- */
   /* Manual Transaction Submit     */
   /* ----------------------------- */
+  /* ----------------------------- */
+  /* Manual Transaction Submit     */
+  /* ----------------------------- */
   const handleManualSubmit = async () => {
     if (!form.date) return toast.error("Please select a date");
     if (!form.description.trim()) return toast.error("Description is required");
     if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
       return toast.error("Enter a valid amount");
-
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-    if (form.date < todayStr) {
-      return toast.error("Transaction date cannot be in the past");
-    }
 
     const amount = Number(Number(form.amount).toFixed(2));
     const signedAmount = form.type === "credit" ? amount : -amount;
