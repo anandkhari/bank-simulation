@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import UploadTransaction from "./components/UploadTransaction";
 import toast from "react-hot-toast";
-import { Trash2, X, ArrowUpDown, ArrowUp, ArrowDown, Filter, CalendarX, Loader2 } from "lucide-react";
+import { Trash2, X, ArrowUp, Filter, CalendarX, Loader2 } from "lucide-react";
 
 function formatCurrency(value) {
   const num = Number(value);
@@ -24,9 +24,6 @@ export default function AccountPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // --- Simplified Filter & Sort State ---
-  const [sortDir, setSortDir] = useState("desc"); // Only need direction
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -73,15 +70,14 @@ export default function AccountPage() {
 
   const toggleSelect = (id) => {
     setSelectedTransactions((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
-  // --- Filtered + Sorted Transactions (Date & Time Focused) ---
+  // Always ascending — date first, then sort_order for same-day tiebreaking
   const filteredTransactions = useMemo(() => {
     let result = [...transactions];
 
-    // Date range filter
     if (dateFrom) {
       result = result.filter((tx) => new Date(tx.date) >= new Date(dateFrom));
     }
@@ -91,37 +87,26 @@ export default function AccountPage() {
       result = result.filter((tx) => new Date(tx.date) <= to);
     }
 
-    // Sort by Date, then break ties with created_at timestamp
     result.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-
-      // If the dates are exactly the same day, break the tie using the exact creation time
-      if (dateA === dateB) {
-        const timeA = new Date(a.created_at || 0).getTime();
-        const timeB = new Date(b.created_at || 0).getTime();
-        return sortDir === "asc" ? timeA - timeB : timeB - timeA;
-      }
-
-      // Otherwise, just sort by the date normally
-      return sortDir === "asc" ? dateA - dateB : dateB - dateA;
+      if (dateA === dateB) return a.sort_order - b.sort_order;
+      return dateA - dateB;
     });
 
     return result;
-  }, [transactions, dateFrom, dateTo, sortDir]);
+  }, [transactions, dateFrom, dateTo]);
 
   const clearFilters = () => {
     setDateFrom("");
     setDateTo("");
-    setSortDir("desc");
   };
 
-  const isFiltered = dateFrom || dateTo || sortDir !== "desc";
+  const isFiltered = dateFrom || dateTo;
 
   const handleDeleteAll = async () => {
     if (!confirm("⚠️ This will delete ALL transactions permanently. Continue?"))
       return;
-
     setIsDeleting(true);
     try {
       const res = await fetch("/api/admin/transactions/delete-all", {
@@ -210,6 +195,7 @@ export default function AccountPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8">
+
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -333,7 +319,11 @@ export default function AccountPage() {
       {/* TRANSACTIONS CONTAINER */}
       <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <div
-          className={`p-4 md:p-6 border-b transition-all duration-300 ${selectedTransactions.length > 0 ? "bg-red-50 border-red-100" : "bg-white border-gray-100"}`}
+          className={`p-4 md:p-6 border-b transition-all duration-300 ${
+            selectedTransactions.length > 0
+              ? "bg-red-50 border-red-100"
+              : "bg-white border-gray-100"
+          }`}
         >
           {selectedTransactions.length === 0 ? (
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
@@ -342,10 +332,9 @@ export default function AccountPage() {
                   Transactions
                 </h2>
                 <p className="text-gray-400 text-xs mt-0.5">
-                  {filteredTransactions.length} results
+                  {filteredTransactions.length} results · oldest to newest
                 </p>
               </div>
-
               <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-4">
                 <div className="w-full sm:w-auto bg-gray-50 p-1.5 rounded-xl border border-gray-100 shadow-sm">
                   <UploadTransaction
@@ -405,7 +394,7 @@ export default function AccountPage() {
           )}
         </div>
 
-        {/* FILTER PANEL */}
+        {/* FILTER PANEL — date range only, no sort toggle */}
         {showFilters && (
           <div className="px-6 py-4 bg-gray-50/70 border-b border-gray-100">
             <div className="flex flex-wrap gap-6 items-end">
@@ -420,7 +409,6 @@ export default function AccountPage() {
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   To Date
@@ -432,27 +420,6 @@ export default function AccountPage() {
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Order
-                </label>
-                <div className="flex rounded-lg overflow-hidden border border-gray-200">
-                  <button
-                    onClick={() => setSortDir("asc")}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${sortDir === "asc" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}
-                  >
-                    <ArrowUp size={13} /> Asc
-                  </button>
-                  <button
-                    onClick={() => setSortDir("desc")}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${sortDir === "desc" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}
-                  >
-                    <ArrowDown size={13} /> Desc
-                  </button>
-                </div>
-              </div>
-
               {isFiltered && (
                 <button
                   onClick={clearFilters}
@@ -465,23 +432,13 @@ export default function AccountPage() {
           </div>
         )}
 
-        {/* TABLE */}
+        {/* TABLE — always ascending, balance_after is always correct */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[700px]">
             <thead className="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold border-b">
               <tr>
-                <th
-                  className="p-4 text-left cursor-pointer hover:text-blue-600 transition-colors"
-                  onClick={() =>
-                    setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-                  }
-                >
-                  Date{" "}
-                  {sortDir === "asc" ? (
-                    <ArrowUp size={12} className="inline" />
-                  ) : (
-                    <ArrowDown size={12} className="inline" />
-                  )}
+                <th className="p-4 text-left">
+                  Date <ArrowUp size={12} className="inline opacity-50" />
                 </th>
                 <th className="p-4 text-left">Description</th>
                 <th className="p-4 text-left">Debit</th>
@@ -493,14 +450,13 @@ export default function AccountPage() {
                     className="w-4 h-4 cursor-pointer"
                     checked={
                       filteredTransactions.length > 0 &&
-                      selectedTransactions.length ===
-                        filteredTransactions.length
+                      selectedTransactions.length === filteredTransactions.length
                     }
                     onChange={(e) =>
                       setSelectedTransactions(
                         e.target.checked
                           ? filteredTransactions.map((tx) => tx.id)
-                          : [],
+                          : []
                       )
                     }
                   />
@@ -511,7 +467,11 @@ export default function AccountPage() {
               {filteredTransactions.map((tx) => (
                 <tr
                   key={tx.id}
-                  className={`group ${selectedTransactions.includes(tx.id) ? "bg-red-50/40" : "hover:bg-gray-50/80"}`}
+                  className={`group ${
+                    selectedTransactions.includes(tx.id)
+                      ? "bg-red-50/40"
+                      : "hover:bg-gray-50/80"
+                  }`}
                 >
                   <td className="p-4 text-sm text-gray-500">
                     {new Date(tx.date).toLocaleDateString("en-GB")}

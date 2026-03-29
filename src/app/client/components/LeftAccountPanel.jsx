@@ -100,12 +100,16 @@ export default function LeftAccountPanel() {
       if (accountData) setAccount(accountData);
 
     setTransactionsLoading(true);
-      const { data: txData } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("account_id", id)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false }); // <-- NEW: Breaks same-day ties perfectly
+     const { data: txData, error: txError } = await supabase
+  .from("transactions")
+  .select("*")
+  .eq("account_id", id)
+  .order("date", { ascending: false })
+  .order("sort_order", { ascending: false });
+
+if (txError) {
+  console.error("Failed to load transactions:", txError.message);
+}
 
 
 

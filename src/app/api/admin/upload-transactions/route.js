@@ -35,10 +35,10 @@ function generateFingerprint(date, description, debit, credit) {
 }
 
 function recalculateBalances(transactions, openingBalance) {
-  let running = openingBalance ?? 0;
+  let running = Number((openingBalance ?? 0).toFixed(2));
   return transactions.map((t) => {
-    running += t.amount;
-    return { ...t, balance_after: Number(running.toFixed(2)) };
+    running = Number((running + Number(t.amount)).toFixed(2));
+    return { ...t, balance_after: running };
   });
 }
 
@@ -136,13 +136,40 @@ export async function POST(req) {
         .in("fingerprint", fingerprints);
 
       const existingFingerprints = new Set((existingRows || []).map((r) => r.fingerprint));
-      const newTransactions = withFingerprints.filter(
-        (t) => !existingFingerprints.has(t.fingerprint)
-      );
 
-      if (newTransactions.length === 0) continue;
+    const newTransactions = withFingerprints.filter(
+  (t) => !existingFingerprints.has(t.fingerprint)
+);
 
-      const sorted = newTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+if (newTransactions.length === 0) continue;
+
+// Validate and correct amount signs before processing
+const validatedTransactions = newTransactions.map((t) => {
+  const credit = Number(t.credit ?? 0);
+  const debit = Number(t.debit ?? 0);
+  let amount = Number(t.amount);
+
+  // If amount is missing or NaN, derive it from debit/credit
+  if (!amount || isNaN(amount)) {
+    amount = credit > 0 ? credit : -debit;
+  }
+
+  // Ensure sign is consistent with debit/credit
+  if (credit > 0 && amount < 0) {
+    console.warn(`[sign-fix] Credit had negative amount — corrected: ${t.description}`);
+    amount = Math.abs(amount);
+  }
+
+  if (debit > 0 && amount > 0) {
+    console.warn(`[sign-fix] Debit had positive amount — corrected: ${t.description}`);
+    amount = -Math.abs(amount);
+  }
+
+  return { ...t, amount: Number(amount.toFixed(2)) };
+});
+
+const sorted = validatedTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
       const withBalances = recalculateBalances(sorted, opening_balance);
 
       const start_date = withBalances[0].date;
@@ -185,35 +212,99 @@ export async function POST(req) {
       // 3. Fetch true previous balance for Manual Entries
       let manualBalanceAfter = null;
 
-      if (is_manual) {
-        // Fetch the absolute most recent transaction from the ledger
-        const { data: lastTxs } = await supabaseAdmin
-          .from("transactions")
-          .select("balance_after")
-          .eq("account_id", account_id)
-          .order("date", { ascending: false })
-          .order("id", { ascending: false })
-          .limit(1);
+      let manualSortOrder = 1; // default
 
-        // Use the last transaction's balance, fallback to 0 if it's a brand new account
-        const previousBalance = (lastTxs && lastTxs.length > 0) ? Number(lastTxs[0].balance_after) : 0;
-        manualBalanceAfter = Number((previousBalance + sorted[0].amount).toFixed(2));
-      }
+if (is_manual) {
+  // Fetch true previous balance using correct ordering
+  const { data: lastTxs } = await supabaseAdmin
+    .from("transactions")
+    .select("balance_after")
+    .eq("account_id", account_id)
+    .order("date", { ascending: false })
+    .order("sort_order", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
 
-      const records = withBalances.map((t) => ({
-        user_id,
-        account_id,
-        statement_id,
-        date: t.date,
-        description: t.description,
-        debit: t.debit ?? null,
-        credit: t.credit ?? null,
-        amount: t.amount,
-        type: t.type,
-        balance_after: is_manual ? manualBalanceAfter : t.balance_after,
-        fingerprint: t.fingerprint,
-        source: is_manual ? "manual_entry" : "excel_import",
-      }));
+  const { data: accountMeta } = await supabaseAdmin
+  .from("accounts")
+  .select("opening_balance")
+  .eq("id", account_id)
+  .single();
+
+const previousBalance = (lastTxs && lastTxs.length > 0)
+  ? Number(lastTxs[0].balance_after)
+  : Number(accountMeta?.opening_balance ?? 0);
+
+  manualBalanceAfter = Number((previousBalance + sorted[0].amount).toFixed(2));
+
+  // Find the next sort_order for this account + date
+  const transactionDate = sorted[0].date;
+  const { data: sameDayTxs } = await supabaseAdmin
+    .from("transactions")
+    .select("sort_order")
+    .eq("account_id", account_id)
+    .eq("date", transactionDate)
+    .order("sort_order", { ascending: false, nullsFirst: false })
+    .limit(1);
+
+  manualSortOrder = sameDayTxs && sameDayTxs.length > 0
+    ? (sameDayTxs[0].sort_order ?? 0) + 1
+    : 1;
+}
+
+     // For bulk: pre-fetch existing sort_order counts per date
+const existingSortOrders = {};
+if (!is_manual) {
+  const uniqueDates = [...new Set(withBalances.map((t) => t.date))];
+  const { data: existingCounts } = await supabaseAdmin
+    .from("transactions")
+    .select("date, sort_order")
+    .eq("account_id", account_id)
+    .in("date", uniqueDates)
+    .order("sort_order", { ascending: false, nullsFirst: false });
+
+  // Track the highest sort_order already in DB per date
+  for (const row of existingCounts || []) {
+    if (!existingSortOrders[row.date] || row.sort_order > existingSortOrders[row.date]) {
+      existingSortOrders[row.date] = row.sort_order ?? 0;
+    }
+  }
+}
+
+// Track incrementing sort_order per date for bulk
+const bulkSortCounters = {};
+
+const records = withBalances.map((t) => {
+  let sort_order;
+
+  if (is_manual) {
+    sort_order = manualSortOrder;
+  } else {
+    // Start from after the highest existing sort_order for that date
+    if (bulkSortCounters[t.date] === undefined) {
+      bulkSortCounters[t.date] = (existingSortOrders[t.date] ?? 0) + 1;
+    } else {
+      bulkSortCounters[t.date] += 1;
+    }
+    sort_order = bulkSortCounters[t.date];
+  }
+
+  return {
+    user_id,
+    account_id,
+    statement_id,
+    date: t.date,
+    description: t.description,
+    debit: t.debit ?? null,
+    credit: t.credit ?? null,
+    amount: t.amount,
+    type: t.type,
+    balance_after: is_manual ? manualBalanceAfter : t.balance_after,
+    fingerprint: t.fingerprint,
+    source: is_manual ? "manual_entry" : "excel_import",
+    sort_order, // ✅ now always assigned
+  };
+});
 
       const { error: insertError } = await supabaseAdmin.from("transactions").insert(records);
 

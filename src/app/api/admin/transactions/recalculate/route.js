@@ -8,65 +8,90 @@ export async function POST(req) {
       return Response.json({ error: "Missing account_id" }, { status: 400 });
     }
 
-    // 1. Fetch all transactions for this account in chronological order
-    // 1. Fetch all transactions for this account in chronological order
+    // 1. Fetch only required columns for recalculation
     const { data: transactions, error: fetchError } = await supabaseAdmin
       .from("transactions")
-      .select("*")
+      .select("id, amount, date, sort_order, created_at")
       .eq("account_id", account_id)
       .order("date", { ascending: true })
-      .order("created_at", { ascending: true }); // <-- FIXED: Now uses exact time for same-day entries // Secondary sort prevents same-day overlap bugs
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true }); // last resort tiebreaker only
 
     if (fetchError) throw fetchError;
 
-    // If all transactions were deleted, reset the master balance to 0
+    // 2. If all transactions were deleted, reset balance to opening balance
     if (!transactions || transactions.length === 0) {
+      const { data: resetAccount } = await supabaseAdmin
+        .from("accounts")
+        .select("opening_balance")
+        .eq("id", account_id)
+        .single();
+
+      const resetBalance = resetAccount?.opening_balance
+        ? Number(resetAccount.opening_balance)
+        : 0;
+
       await supabaseAdmin
         .from("accounts")
-        .update({ balance: 0 })
+        .update({ balance: resetBalance })
         .eq("id", account_id);
-      return Response.json({ success: true, message: "Account reset to 0" });
+
+      return Response.json({
+        success: true,
+        message: `Account reset to opening balance: ${resetBalance}`,
+      });
     }
 
-    // 2. Fetch the starting point from the earliest statement
+    // 3. Fetch the starting point from the earliest statement
     const { data: firstStatement } = await supabaseAdmin
       .from("statements")
       .select("opening_bal")
       .eq("account_id", account_id)
       .order("start_date", { ascending: true })
       .limit(1)
+      .maybeSingle();
+
+    // 4. Get account's opening balance as fallback
+    const { data: accountData } = await supabaseAdmin
+      .from("accounts")
+      .select("opening_balance")
+      .eq("id", account_id)
       .single();
 
-    // 3. Set the initial balance to the first statement's opening balance (fallback to 0)
+    // 5. Set the initial running balance — statement opening takes priority,
+    //    falls back to account opening balance, then 0 as last resort
     let runningBalance = firstStatement?.opening_bal
       ? Number(firstStatement.opening_bal)
-      : 0;
+      : accountData?.opening_balance
+        ? Number(accountData.opening_balance)
+        : 0;
 
-    // 4. Recalculate running balances accurately from that starting point
+    // 6. Recalculate running balances with float-safe math
     const updatedRecords = transactions.map((tx) => {
-      runningBalance += Number(tx.amount);
+      runningBalance = Number((runningBalance + Number(tx.amount)).toFixed(2));
       return {
         ...tx,
-        balance_after: Number(runningBalance.toFixed(2)),
+        balance_after: runningBalance,
       };
     });
 
-    // 5. Update all transaction rows in the database with the fixed math
-    const { error: upsertError } = await supabaseAdmin
-      .from("transactions")
-      .upsert(updatedRecords);
+  
+   // 7. Atomically update all transaction balances AND master account balance in batches
+const finalBalance = updatedRecords[updatedRecords.length - 1].balance_after;
+const BATCH_SIZE = 500;
 
-    if (upsertError) throw upsertError;
+for (let i = 0; i < updatedRecords.length; i += BATCH_SIZE) {
+  const batch = updatedRecords.slice(i, i + BATCH_SIZE);
+  const isLastBatch = i + BATCH_SIZE >= updatedRecords.length;
 
-    // 6. Update the master account balance with the final, mathematically proven number
-    const finalBalance =
-      updatedRecords[updatedRecords.length - 1].balance_after;
-    const { error: accountError } = await supabaseAdmin
-      .from("accounts")
-      .update({ balance: finalBalance })
-      .eq("id", account_id);
+  const { error: rpcError } = await supabaseAdmin.rpc("recalculate_balances", {
+    p_account_id: account_id,
+    p_records: batch,
+    p_final_balance: isLastBatch ? finalBalance : null,
+  });
 
-    if (accountError) throw accountError;
+  if (rpcError) throw rpcError;
+}
 
     return Response.json({ success: true, finalBalance });
   } catch (error) {

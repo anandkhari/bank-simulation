@@ -55,14 +55,15 @@ export async function POST(req) {
 
     const { data, error } = await supabaseAdmin
       .from("accounts")
-      .insert({
-        user_id,
-        account_name,
-        account_number: full_account_number,
-        account_type,
-        currency,
-        balance
-      })
+     .insert({
+  user_id,
+  account_name,
+  account_number: full_account_number,
+  account_type,
+  currency,
+  balance,
+  opening_balance: balance  // ← preserve forever, never overwrite
+})
       .select()
       .single();
 

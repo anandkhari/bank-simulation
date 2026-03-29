@@ -22,12 +22,13 @@ export async function GET(req, { params }) {
     }
 
     // Fetch transactions for this account
-    const { data: transactions, error: txError } =
-      await supabaseAdmin
-        .from("transactions")
-        .select("*")
-        .eq("account_id", id)
-        .order("date", { ascending: false });
+   const { data: transactions, error: txError } =
+  await supabaseAdmin
+    .from("transactions")
+    .select("*")
+    .eq("account_id", id)
+    .order("date", { ascending: true })
+    .order("sort_order", { ascending: true });
 
     if (txError) {
       return Response.json(
