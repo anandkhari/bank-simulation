@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import UploadTransaction from "./components/UploadTransaction";
 import toast from "react-hot-toast";
-import { Trash2, X, ArrowUp, Filter, CalendarX, Loader2 } from "lucide-react";
+import { Trash2, X, ArrowUp,ArrowDown, Filter, CalendarX, Loader2 } from "lucide-react";
 
 function formatCurrency(value) {
   const num = Number(value);
@@ -27,6 +27,7 @@ export default function AccountPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const [formData, setFormData] = useState({
     transit_number: "",
@@ -70,7 +71,7 @@ export default function AccountPage() {
 
   const toggleSelect = (id) => {
     setSelectedTransactions((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
@@ -90,12 +91,13 @@ export default function AccountPage() {
     result.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-      if (dateA === dateB) return a.sort_order - b.sort_order;
-      return dateA - dateB;
+      const dir = sortOrder === "desc" ? -1 : 1;
+      if (dateA === dateB) return dir * (a.sort_order - b.sort_order);
+      return dir * (dateA - dateB);
     });
 
     return result;
-  }, [transactions, dateFrom, dateTo]);
+  }, [transactions, dateFrom, dateTo, sortOrder]); // ← add sortOrder here
 
   const clearFilters = () => {
     setDateFrom("");
@@ -195,7 +197,6 @@ export default function AccountPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8">
-
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -332,7 +333,10 @@ export default function AccountPage() {
                   Transactions
                 </h2>
                 <p className="text-gray-400 text-xs mt-0.5">
-                  {filteredTransactions.length} results · oldest to newest
+                  {filteredTransactions.length} results ·{" "}
+                  {sortOrder === "desc"
+                    ? "newest to oldest"
+                    : "oldest to newest"}
                 </p>
               </div>
               <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-4">
@@ -396,49 +400,91 @@ export default function AccountPage() {
 
         {/* FILTER PANEL — date range only, no sort toggle */}
         {showFilters && (
-          <div className="px-6 py-4 bg-gray-50/70 border-b border-gray-100">
-            <div className="flex flex-wrap gap-6 items-end">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  From Date
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  To Date
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              {isFiltered && (
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-200 bg-white"
-                >
-                  <CalendarX size={14} /> Clear
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+  <div className="px-6 py-4 bg-gray-50/70 border-b border-gray-100">
+    <div className="flex flex-wrap gap-6 items-end">
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          From Date
+        </label>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          To Date
+        </label>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        />
+      </div>
+
+      {/* Sort Order Toggle */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Sort Order
+        </label>
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => setSortOrder("desc")}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${
+              sortOrder === "desc"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <ArrowDown size={13} /> Newest
+          </button>
+          <button
+            onClick={() => setSortOrder("asc")}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+              sortOrder === "asc"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <ArrowUp size={13} /> Oldest
+          </button>
+        </div>
+      </div>
+
+      {isFiltered && (
+        <button
+          onClick={clearFilters}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-200 bg-white"
+        >
+          <CalendarX size={14} /> Clear
+        </button>
+      )}
+    </div>
+  </div>
+)}
 
         {/* TABLE — always ascending, balance_after is always correct */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[700px]">
             <thead className="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold border-b">
               <tr>
-                <th className="p-4 text-left">
-                  Date <ArrowUp size={12} className="inline opacity-50" />
+                <th
+                  className="p-4 text-left cursor-pointer select-none hover:text-gray-700 transition-colors"
+                  onClick={() =>
+                    setSortOrder((s) => (s === "desc" ? "asc" : "desc"))
+                  }
+                >
+                  <span className="flex items-center gap-1">
+                    Date
+                    {sortOrder === "desc" ? (
+                      <ArrowDown size={12} className="inline opacity-60" />
+                    ) : (
+                      <ArrowUp size={12} className="inline opacity-60" />
+                    )}
+                  </span>
                 </th>
                 <th className="p-4 text-left">Description</th>
                 <th className="p-4 text-left">Debit</th>
@@ -450,13 +496,14 @@ export default function AccountPage() {
                     className="w-4 h-4 cursor-pointer"
                     checked={
                       filteredTransactions.length > 0 &&
-                      selectedTransactions.length === filteredTransactions.length
+                      selectedTransactions.length ===
+                        filteredTransactions.length
                     }
                     onChange={(e) =>
                       setSelectedTransactions(
                         e.target.checked
                           ? filteredTransactions.map((tx) => tx.id)
-                          : []
+                          : [],
                       )
                     }
                   />
