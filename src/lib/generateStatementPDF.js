@@ -1,6 +1,9 @@
 ﻿import React from "react";
+import { existsSync } from "fs";
+import path from "path";
 import {
   Document,
+  Font,
   Page,
   Text,
   View,
@@ -9,6 +12,68 @@ import {
   Path,
   renderToBuffer,
 } from "@react-pdf/renderer";
+
+// Register Inter for business name lines, with a safe fallback.
+try {
+  const interRegularCandidates = [
+    path.join(
+      process.cwd(),
+      "node_modules",
+      "@fontsource",
+      "inter",
+      "files",
+      "inter-latin-400-normal.woff",
+    ),
+    path.join(process.cwd(), "public", "fonts", "Inter-Regular.ttf"),
+  ];
+  const interMediumCandidates = [
+    path.join(
+      process.cwd(),
+      "node_modules",
+      "@fontsource",
+      "inter",
+      "files",
+      "inter-latin-500-normal.woff",
+    ),
+    path.join(process.cwd(), "public", "fonts", "Inter-Medium.ttf"),
+  ];
+  const fallbackCandidates = [
+    "C:/Windows/Fonts/segoeui.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+  ];
+
+  const interRegularPath = interRegularCandidates.find((fontPath) =>
+    existsSync(fontPath),
+  );
+  const interMediumPath = interMediumCandidates.find((fontPath) =>
+    existsSync(fontPath),
+  );
+
+  if (interRegularPath || interMediumPath) {
+    Font.register({
+      family: "Inter",
+      fonts: [
+        ...(interRegularPath
+          ? [{ src: interRegularPath, fontWeight: 400 }]
+          : []),
+        ...(interMediumPath ? [{ src: interMediumPath, fontWeight: 500 }] : []),
+      ],
+    });
+  } else {
+    const fallbackPath = fallbackCandidates.find((fontPath) =>
+      existsSync(fontPath),
+    );
+
+    if (fallbackPath) {
+      Font.register({
+        family: "Inter",
+        src: fallbackPath,
+      });
+    }
+  }
+} catch {
+  // If unavailable, React PDF will fall back to default fonts.
+}
 
 /* ----------------------------- */
 /* Styles                        */
@@ -29,14 +94,14 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 28,
-    paddingTop: 44,
+    paddingTop: 28,
   },
   pageNumber: {
     position: "absolute",
     bottom: 10,
     right: 28,
-    fontSize: 11,
-    fontFamily: "Helvetica",
+    fontSize: 9,
+    fontFamily: "Times-Roman",
     color: "#333333",
     fontWeight:600,
   },
@@ -60,9 +125,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 16,
-    paddingLeft: 14,
+    paddingLeft: 36,
   },
-  logoBox: { width: 32, height: 42, marginRight: 6 },
+  logoBox: { width: 32, height: 42, marginRight: 4 },
   bankName: {
     fontSize: 8.5, // Slightly larger to show authority
     fontFamily: "Times-Bold", // High-contrast serif bold
@@ -79,34 +144,40 @@ const styles = StyleSheet.create({
     fontWeight: 400,
   },
   refLine: {
-    fontSize: 7.5,
-    color: "#444444",
+    fontSize: 6.5,
+    color: "#000000",
     fontFamily: "Courier",
-    marginBottom: 4,
-    marginTop:12,
     letterSpacing: 0.5,
-    fontWeight:800,
-    
+  },
+  refLineRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 1,
+    marginTop: 12,
+    marginLeft: 32,
   },
   refLineCode: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    color:'#444444',
-    fontWeight:'600',
-    marginLeft:'20'
+    fontSize: 9,
+    fontFamily: "Courier-Bold",
+    color:'#000000',
+    marginLeft: 14,
+    letterSpacing: 1,
   },
   businessName: {
-    fontSize: 12,
-    fontFamily: "Helvetica-Bold",
-    lineHeight: 1.1,
-    letterSpacing:-0.2,
+    fontSize: 10,
+    fontFamily: "Inter",
+    fontWeight: 500,
+    lineHeight: 1.2,
+    letterSpacing: -0.1,
+    color:'#000000',
+    marginLeft: 32,
   },
   statementTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "Times-Bold",
     textAlign: "right",
     marginBottom: 28,
-    marginTop: 5,
+  
   },
   dateRange: {
     fontSize: 14,
@@ -125,7 +196,7 @@ const styles = StyleSheet.create({
   accountNumberValue: {
     fontSize: 12,
     fontFamily: "Times-Bold",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   dividerBlack: {
     borderBottomWidth: 1,
@@ -152,15 +223,16 @@ const styles = StyleSheet.create({
     textAlign: "left",
   },
   reachUsWebsiteText: {
-    fontSize: 11,
+    fontSize: 9,
     fontFamily: "Times-Roman",
     lineHeight: 1,
     textAlign: "right",
   },
   sectionDivider: {
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderTopColor: "#000000",
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 3,
     width: "60%",
   },
   sectionDividerFull: {
@@ -169,18 +241,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   summaryContainer: { width: "60%", marginBottom: 20 },
-  summaryTitle: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 6 },
+  summaryTitle: { fontSize: 15,   fontFamily: "Times-Bold", marginBottom: 6 },
   summaryAccountType: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
+    fontFamily: "Times-Bold",
     marginBottom: 6,
   },
   summaryBranchName: {
-    fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
+    fontFamily: "Times-Bold",
     lineHeight: 1.4,
   },
-  summaryBranchAddress: { fontSize: 8, lineHeight: 1.4, marginBottom: 3 },
+  summaryBranchAddress: { fontSize: 8, fontFamily: "Times-Roman", lineHeight: 1.4, marginBottom: 3 },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -192,7 +264,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 3,
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
     borderBottomColor: "#333333",
   },
   summaryRowLast: {
@@ -201,23 +273,23 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     marginBottom: 20,
   },
-  summaryLabel: { fontSize: 9, fontFamily: "Helvetica" },
-  summaryValue: { fontSize: 9, fontFamily: "Helvetica", textAlign: "right" },
-  summaryLabelBold: { fontSize: 9, fontFamily: "Helvetica-Bold" },
+  summaryLabel: { fontSize: 8, fontFamily: "Helvetica" },
+  summaryValue: { fontSize: 8, fontFamily: "Helvetica", textAlign: "right" },
+  summaryLabelBold: { fontSize: 8, fontFamily: "Helvetica-Bold" },
   summaryValueBold: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     textAlign: "right",
   },
   activityTitle: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 15,
+    fontFamily: "Times-Bold",
     marginBottom: 5,
   },
   continuationTitle: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 10,
+    fontSize: 16,
+    fontFamily: "Times-Bold",
+    marginBottom: 8,
   },
   tableHeaderRow: {
     flexDirection: "row",
@@ -247,7 +319,7 @@ const styles = StyleSheet.create({
   closingFooter: {
     borderTopWidth: 0.5,
     borderTopColor: "#000000",
-    borderBottomWidth: 1.5,
+    borderBottomWidth: 0.75,
     borderBottomColor: "#000000",
     marginTop: 0,
     paddingTop: 4,
@@ -255,15 +327,15 @@ const styles = StyleSheet.create({
   },
   closingFooterRow: {
     flexDirection: "row",
-    paddingBottom: 10,
+    paddingBottom: 12,
   },
   closingFooterFeesRow: {
     flexDirection: "row",
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderTopColor: "#7a7a7a",
     marginTop: 2,
     paddingTop: 4,
-    paddingBottom: 2,
+    paddingBottom: 6,
   },
   closingFooterLabel: {
     fontSize: 8,
@@ -344,13 +416,13 @@ function StatementDocument({ account, statement, transactions }) {
                   <Text style={styles.bankAddress}>TORONTO ON M5W 1L5</Text>
                 </View>
               </View>
-              <Text style={styles.refLine}>
-                RBBDA30000_4780138E D 03282{" "}
-                <Text style={styles.refLineCode}>00101</Text>
-              </Text>
-              <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
-              <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
-              <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
+              <View style={styles.refLineRow}>
+                <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
+                <Text style={styles.refLineCode}>00203</Text>
+              </View>
+              <Text style={styles.businessName}>MUSIC4CHARITY FOUNDATION</Text>
+              <Text style={styles.businessName}>51 NEWCASTLECRT</Text>
+              <Text style={styles.businessName}>KITCHENER ON N2R0G7</Text>
             </View>
 
             {/* RIGHT */}
@@ -546,13 +618,13 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                   <Text style={styles.bankAddress}>TORONTO ON M5W 1L5</Text>
                 </View>
               </View>
-              <Text style={styles.refLine}>
-                RBBDA30000_4780138E D 03282{" "}
+              <View style={styles.refLineRow}>
+                <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
                 <Text style={styles.refLineCode}>00101</Text>
-              </Text>
-              <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
-              <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
-              <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
+              </View>
+              <Text style={styles.businessName}>MUSIC4CHARITY FOUNDATION</Text>
+              <Text style={styles.businessName}>51 NEWCASTLECRT</Text>
+              <Text style={styles.businessName}>KITCHENER ON N2R0G7</Text>
             </View>
 
             <View style={styles.headerRight}>
@@ -863,5 +935,7 @@ function chunkArray(items, chunkSize) {
 
   return chunks;
 }
+
+
 
 
