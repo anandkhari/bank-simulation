@@ -1,5 +1,4 @@
 ﻿import React from "react";
-import { existsSync } from "fs";
 import path from "path";
 import {
   Document,
@@ -12,67 +11,45 @@ import {
   Path,
   renderToBuffer,
 } from "@react-pdf/renderer";
-
-// Register Inter for business name lines, with a safe fallback.
 try {
-  const interRegularCandidates = [
-    path.join(
-      process.cwd(),
-      "node_modules",
-      "@fontsource",
-      "inter",
-      "files",
-      "inter-latin-400-normal.woff",
-    ),
-    path.join(process.cwd(), "public", "fonts", "Inter-Regular.ttf"),
-  ];
-  const interMediumCandidates = [
-    path.join(
-      process.cwd(),
-      "node_modules",
-      "@fontsource",
-      "inter",
-      "files",
-      "inter-latin-500-normal.woff",
-    ),
-    path.join(process.cwd(), "public", "fonts", "Inter-Medium.ttf"),
-  ];
-  const fallbackCandidates = [
-    "C:/Windows/Fonts/segoeui.ttf",
-    "C:/Windows/Fonts/arial.ttf",
-  ];
-
-  const interRegularPath = interRegularCandidates.find((fontPath) =>
-    existsSync(fontPath),
-  );
-  const interMediumPath = interMediumCandidates.find((fontPath) =>
-    existsSync(fontPath),
-  );
-
-  if (interRegularPath || interMediumPath) {
-    Font.register({
-      family: "Inter",
-      fonts: [
-        ...(interRegularPath
-          ? [{ src: interRegularPath, fontWeight: 400 }]
-          : []),
-        ...(interMediumPath ? [{ src: interMediumPath, fontWeight: 500 }] : []),
-      ],
-    });
-  } else {
-    const fallbackPath = fallbackCandidates.find((fontPath) =>
-      existsSync(fontPath),
-    );
-
-    if (fallbackPath) {
-      Font.register({
-        family: "Inter",
-        src: fallbackPath,
-      });
-    }
-  }
+  Font.register({
+    family: "Arial Narrow",
+    src: "C:/Windows/Fonts/arialnb.ttf",
+  });
 } catch {
-  // If unavailable, React PDF will fall back to default fonts.
+  // Keep empty intentionally.
+}
+
+try {
+  Font.register({
+    family: "Source Sans 3",
+    fonts: [
+      {
+        src: path.join(
+          process.cwd(),
+          "node_modules",
+          "@fontsource",
+          "source-sans-3",
+          "files",
+          "source-sans-3-latin-400-normal.woff",
+        ),
+        fontWeight: 400,
+      },
+      {
+        src: path.join(
+          process.cwd(),
+          "node_modules",
+          "@fontsource",
+          "source-sans-3",
+          "files",
+          "source-sans-3-latin-700-normal.woff",
+        ),
+        fontWeight: 700,
+      },
+    ],
+  });
+} catch {
+  // Keep defaults if this font registration fails.
 }
 
 /* ----------------------------- */
@@ -147,7 +124,7 @@ const styles = StyleSheet.create({
     fontSize: 6.5,
     color: "#000000",
     fontFamily: "Courier",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   refLineRow: {
     flexDirection: "row",
@@ -161,12 +138,12 @@ const styles = StyleSheet.create({
     fontFamily: "Courier-Bold",
     color:'#000000',
     marginLeft: 14,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   businessName: {
     fontSize: 10,
-    fontFamily: "Inter",
-    fontWeight: 500,
+    fontFamily: "Arial Narrow",
+    fontWeight: 400,
     lineHeight: 1.2,
     letterSpacing: -0.1,
     color:'#000000',
@@ -273,12 +250,13 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     marginBottom: 20,
   },
-  summaryLabel: { fontSize: 8, fontFamily: "Helvetica" },
-  summaryValue: { fontSize: 8, fontFamily: "Helvetica", textAlign: "right" },
-  summaryLabelBold: { fontSize: 8, fontFamily: "Helvetica-Bold" },
+  summaryLabel: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 500 },
+  summaryValue: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 500, textAlign: "right" },
+  summaryLabelBold: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 700 },
   summaryValueBold: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 9,
+    fontFamily: "Source Sans 3",
+    fontWeight: 700,
     textAlign: "right",
   },
   activityTitle: {
@@ -299,7 +277,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     marginBottom: 0,
   },
-  tableHeaderCell: { fontSize: 7.5, fontFamily: "Helvetica-Bold" },
+  tableHeaderCell: { fontSize: 7.5, fontFamily: "Source Sans 3", fontWeight: 700 },
   tableHeaderDebitCell: { paddingRight: 4 },
   tableHeaderCreditCell: { paddingLeft: 4 },
   openingRow: {
@@ -314,7 +292,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 0.5,
     borderBottomColor: "#7a7a7a",
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   closingFooter: {
     borderTopWidth: 0.5,
@@ -339,12 +317,13 @@ const styles = StyleSheet.create({
   },
   closingFooterLabel: {
     fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-  
+    fontFamily: "Source Sans 3",
+    fontWeight: 700,
   },
   closingFooterValue: {
     fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Source Sans 3",
+    fontWeight: 700,
     textAlign: "right",
   },
   colDate: { width: "10%" },
@@ -352,8 +331,8 @@ const styles = StyleSheet.create({
   colDebit: { width: "18%", textAlign: "right" },
   colCredit: { width: "18%", textAlign: "right" },
   colBalance: { width: "16%", textAlign: "right" },
-  cellText: { fontSize: 8, fontFamily: "Helvetica" },
-  cellTextBold: { fontSize: 8, fontFamily: "Helvetica-Bold" },
+  cellText: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 500 },
+  cellTextBold: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 700 },
 });
 
 /* ----------------------------- */
@@ -935,6 +914,7 @@ function chunkArray(items, chunkSize) {
 
   return chunks;
 }
+
 
 
 
