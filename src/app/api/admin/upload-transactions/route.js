@@ -338,11 +338,19 @@ const records = withBalances.map((t) => {
 
           const { error: uploadError } = await supabaseAdmin.storage
             .from("statements")
-            .upload(filePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+            .upload(filePath, pdfBuffer, {
+              contentType: "application/pdf",
+              upsert: true,
+              cacheControl: "0",
+            });
 
           if (!uploadError) {
             const { data: urlData } = supabaseAdmin.storage.from("statements").getPublicUrl(filePath);
-            await supabaseAdmin.from("statements").update({ file_url: urlData.publicUrl }).eq("id", statement_id);
+            const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+            await supabaseAdmin
+              .from("statements")
+              .update({ file_url: versionedUrl })
+              .eq("id", statement_id);
           }
         } catch (pdfError) {
           console.error(`[12a] PDF generation/upload failed:`, pdfError);

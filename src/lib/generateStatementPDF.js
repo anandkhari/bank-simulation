@@ -18,6 +18,12 @@ const arialNarrowBoldPath = path.join(
   "fonts",
   "ArialNarrow-Bold.ttf",
 );
+const arialNarrowRegularPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "ArialNarrow-Regular.ttf",
+);
 const sourceSansRegularPath = path.join(
   process.cwd(),
   "public",
@@ -31,13 +37,28 @@ const sourceSansBoldPath = path.join(
   "source-sans-3-latin-700-normal.woff",
 );
 
-if (existsSync(arialNarrowBoldPath)) {
+if (existsSync(arialNarrowRegularPath) && existsSync(arialNarrowBoldPath)) {
+  Font.register({
+    family: "Arial Narrow",
+    fonts: [
+      { src: arialNarrowRegularPath, fontWeight: 400 },
+      { src: arialNarrowBoldPath, fontWeight: 700 },
+    ],
+  });
+} else if (existsSync(arialNarrowRegularPath)) {
+  Font.register({
+    family: "Arial Narrow",
+    src: arialNarrowRegularPath,
+  });
+} else if (existsSync(arialNarrowBoldPath)) {
   Font.register({
     family: "Arial Narrow",
     src: arialNarrowBoldPath,
   });
 } else {
-  console.warn(`PDF font missing: ${arialNarrowBoldPath}`);
+  console.warn(
+    `PDF font missing: ${arialNarrowRegularPath} and ${arialNarrowBoldPath}`,
+  );
 }
 
 if (existsSync(sourceSansRegularPath) && existsSync(sourceSansBoldPath)) {
@@ -123,10 +144,10 @@ const styles = StyleSheet.create({
     fontWeight: 400,
   },
   refLine: {
-    fontSize: 6.5,
+    fontSize: 7,
     color: "#000000",
-    fontFamily: "Courier",
-    letterSpacing: 0.3,
+    fontFamily: "Courier-Bold",
+    letterSpacing: -0.1,
   },
   refLineRow: {
     flexDirection: "row",
@@ -140,14 +161,14 @@ const styles = StyleSheet.create({
     fontFamily: "Courier-Bold",
     color:'#000000',
     marginLeft: 14,
-    letterSpacing: 0.8,
+    letterSpacing: 0.2,
   },
   businessName: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Arial Narrow",
     fontWeight: 400,
     lineHeight: 1.2,
-    letterSpacing: -0.1,
+    letterSpacing: 0.5,
     color:'#000000',
     marginLeft: 32,
   },
@@ -175,7 +196,7 @@ const styles = StyleSheet.create({
   accountNumberValue: {
     fontSize: 12,
     fontFamily: "Times-Bold",
-    letterSpacing: 0.8,
+    letterSpacing: 0.3,
   },
   dividerBlack: {
     borderBottomWidth: 1,
@@ -235,14 +256,14 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderBottomWidth: 1,
     borderBottomColor: "#cccccc",
   },
   summaryRowThick: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderBottomWidth: 1,
     borderBottomColor: "#333333",
   },
@@ -401,9 +422,9 @@ function StatementDocument({ account, statement, transactions }) {
                 <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
                 <Text style={styles.refLineCode}>00203</Text>
               </View>
-              <Text style={styles.businessName}>MUSIC4CHARITY FOUNDATION</Text>
+              <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
               <Text style={styles.businessName}>51 NEWCASTLECRT</Text>
-              <Text style={styles.businessName}>KITCHENER ON N2R0G7</Text>
+              <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
             </View>
 
             {/* RIGHT */}
@@ -601,9 +622,9 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
               </View>
               <View style={styles.refLineRow}>
                 <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
-                <Text style={styles.refLineCode}>00101</Text>
+                <Text style={styles.refLineCode}>00203</Text>
               </View>
-              <Text style={styles.businessName}>MUSIC4CHARITY FOUNDATION</Text>
+              <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
               <Text style={styles.businessName}>51 NEWCASTLECRT</Text>
               <Text style={styles.businessName}>KITCHENER ON N2R0G7</Text>
             </View>

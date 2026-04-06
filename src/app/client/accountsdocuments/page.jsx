@@ -167,8 +167,11 @@ export default function AccountDocuments() {
   // ── DOWNLOAD — extract filename directly from the URL ───────
   const handleDownload = async (url) => {
     try {
-      const filename = url.split("/").pop(); // e.g. Business_Account_Statement-1222_2025-05-17.pdf
-      const response = await fetch(url);
+      const cleanUrl = url || "";
+      const separator = cleanUrl.includes("?") ? "&" : "?";
+      const freshUrl = `${cleanUrl}${separator}dlv=${Date.now()}`;
+      const filename = (cleanUrl.split("/").pop() || "statement.pdf").split("?")[0];
+      const response = await fetch(freshUrl, { cache: "no-store" });
       const blob = await response.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
