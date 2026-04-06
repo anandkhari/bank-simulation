@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import path from "path";
+import { existsSync } from "fs";
 import {
   Document,
   Font,
@@ -11,45 +12,46 @@ import {
   Path,
   renderToBuffer,
 } from "@react-pdf/renderer";
-try {
+const arialNarrowBoldPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "ArialNarrow-Bold.ttf",
+);
+const sourceSansRegularPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "source-sans-3-latin-400-normal.woff",
+);
+const sourceSansBoldPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "source-sans-3-latin-700-normal.woff",
+);
+
+if (existsSync(arialNarrowBoldPath)) {
   Font.register({
     family: "Arial Narrow",
-    src: "C:/Windows/Fonts/arialnb.ttf",
+    src: arialNarrowBoldPath,
   });
-} catch {
-  // Keep empty intentionally.
+} else {
+  console.warn(`PDF font missing: ${arialNarrowBoldPath}`);
 }
 
-try {
+if (existsSync(sourceSansRegularPath) && existsSync(sourceSansBoldPath)) {
   Font.register({
     family: "Source Sans 3",
     fonts: [
-      {
-        src: path.join(
-          process.cwd(),
-          "node_modules",
-          "@fontsource",
-          "source-sans-3",
-          "files",
-          "source-sans-3-latin-400-normal.woff",
-        ),
-        fontWeight: 400,
-      },
-      {
-        src: path.join(
-          process.cwd(),
-          "node_modules",
-          "@fontsource",
-          "source-sans-3",
-          "files",
-          "source-sans-3-latin-700-normal.woff",
-        ),
-        fontWeight: 700,
-      },
+      { src: sourceSansRegularPath, fontWeight: 400 },
+      { src: sourceSansBoldPath, fontWeight: 700 },
     ],
   });
-} catch {
-  // Keep defaults if this font registration fails.
+} else {
+  console.warn(
+    `PDF fonts missing: ${sourceSansRegularPath} or ${sourceSansBoldPath}`,
+  );
 }
 
 /* ----------------------------- */
