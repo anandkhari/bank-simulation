@@ -37,6 +37,10 @@ const linguisticsProBoldPath = path.join(
   pdfFontRoot,
   "LinguisticsPro-Bold.otf",
 );
+const linguisticsProRegularPath = path.join(
+  pdfFontRoot,
+  "LinguisticsPro-Regular.otf",
+);
 const firaSansRegularPath = path.join(pdfFontRoot, "FiraSans-Regular.otf");
 const firaSansBoldPath = path.join(pdfFontRoot, "FiraSans-Bold.otf");
 
@@ -134,13 +138,36 @@ if (existsSync(ocrBRegularPath)) {
   console.warn(`PDF font missing: ${ocrBRegularPath}`);
 }
 
-if (existsSync(linguisticsProBoldPath)) {
+if (existsSync(linguisticsProRegularPath) && existsSync(linguisticsProBoldPath)) {
+  Font.register({
+    family: "Linguistics Pro",
+    fonts: [
+      { src: linguisticsProRegularPath, fontWeight: 400 },
+      { src: linguisticsProBoldPath, fontWeight: 700 },
+    ],
+  });
+  Font.register({
+    family: "Linguistics Pro Regular",
+    src: linguisticsProRegularPath,
+  });
+} else if (existsSync(linguisticsProRegularPath)) {
+  Font.register({
+    family: "Linguistics Pro",
+    src: linguisticsProRegularPath,
+  });
+  Font.register({
+    family: "Linguistics Pro Regular",
+    src: linguisticsProRegularPath,
+  });
+} else if (existsSync(linguisticsProBoldPath)) {
   Font.register({
     family: "Linguistics Pro",
     src: linguisticsProBoldPath,
   });
 } else {
-  console.warn(`PDF font missing: ${linguisticsProBoldPath}`);
+  console.warn(
+    `PDF font missing: ${linguisticsProRegularPath} and ${linguisticsProBoldPath}`,
+  );
 }
 
 /* ----------------------------- */
@@ -161,17 +188,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 28,
+    paddingHorizontal: 18,
+    paddingTop: 24,
     marginLeft: 25,
     
   },
   pageNumber: {
     position: "absolute",
     bottom: 10,
-    right: 28,
-    fontSize: 9,
-    fontFamily: "Times-Roman",
+    right: 20,
+    fontSize: 8,
+    fontFamily: "Meta Correspondence W07",
     color: "#333333",
     fontWeight:600,
   },
@@ -189,13 +216,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   statementDetails: {
-    width: 200,
+    width: 210,
   },
   logoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 16,
-    paddingLeft: 18,
+    marginBottom: 18,
+    paddingLeft: 24,
   },
   logoBox: { width: 32, height: 42, marginRight: 4 },
   bankName: {
@@ -224,8 +251,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     marginBottom: 1,
-    marginTop: 12,
-    marginLeft: 14,
+    marginTop: 6,
+    marginLeft: 20,
   },
   refLineCode: {
     fontSize: 7,
@@ -239,10 +266,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Fira Sans",
     fontWeight: 500,
-    lineHeight: 1.2,
-    letterSpacing: 0.1,
+    lineHeight: 1.1,
+    letterSpacing: -0.2,
     color:'#000000',
-    marginLeft: 14,
+    marginLeft: 19,
   },
   statementTitle: {
     fontSize: 19,
@@ -252,41 +279,47 @@ const styles = StyleSheet.create({
   
   },
   dateRange: {
-    fontSize: 13,
-    fontFamily: "Times-Roman",
+    fontSize: 12,
+    fontFamily: "Linguistics Pro Regular",
     textAlign: "right",
-    marginBottom: 6,
-    marginTop:10,
-    marginBottom:20,
+    marginTop: 13,
+    marginBottom: 18,
   },
   accountNumberRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 1,
+    marginBottom: 0,
   },
-  accountNumberLabel: { fontSize: 12, fontFamily: "Times-Bold" },
+  accountNumberLabel: {
+    fontSize: 11,
+     fontFamily: "Linguistics Pro",
+    letterSpacing: -0.1,
+  },
   accountNumberValue: {
     fontSize: 11,
     fontFamily: "Linguistics Pro",
     letterSpacing: 0.1,
+    paddingLeft: 22,
   },
   dividerBlack: {
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: "#000000",
     marginVertical: 4,
   },
   reachUsTitle: {
     fontSize: 11,
-    fontFamily: "Times-Bold",
+    fontFamily: "Linguistics Pro",
     marginBottom: 1,
     letterSpacing: -0.1,
+    fontWeight:600,
   },
   reachUsText: {
     fontSize: 11,
-    fontFamily: "Times-Roman",
+     fontFamily: "Linguistics Pro Regular",
     lineHeight: 1,
     textAlign: "right",
-    letterSpacing: -0.2,
+    letterSpacing: 0.2,
+    marginBottom:1,
   },
   reachUsTextRow: {
     flexDirection: "row",
@@ -294,23 +327,25 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   trademarkSuperscript: {
-    fontSize: 6.5,
+    fontSize: 8,
     lineHeight: 1,
     verticalAlign: "super",
   },
   reachUsContactText: {
     fontSize: 9.5,
     fontFamily: "Times-Roman",
-    lineHeight: 1,
+    lineHeight: 1.2,
     textAlign: "left",
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
+    marginTop: -2,
+    marginBottom: 2,
   },
   reachUsWebsiteText: {
     fontSize: 9,
     fontFamily: "Times-Roman",
     lineHeight: 1,
     textAlign: "right",
-    letterSpacing: -0.2,
+    letterSpacing: 0,
   },
   sectionDivider: {
     borderTopWidth: 1,
@@ -320,20 +355,20 @@ const styles = StyleSheet.create({
     width: "60%",
   },
   sectionDividerFull: {
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderTopColor: "#000000",
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  summaryContainer: { width: "60%", marginBottom: 20 },
-  summaryTitle: { fontSize: 15,   fontFamily: "Times-Bold", marginBottom: 6 },
+  summaryContainer: { width: "60%", marginBottom: 24 },
+  summaryTitle: { fontSize: 14,   fontFamily: "Linguistics Pro", marginBottom: 6 },
   summaryAccountType: {
-    fontSize: 10,
-    fontFamily: "Times-Bold",
+    fontSize: 9,
+    fontFamily: "Linguistics Pro",
     marginBottom: 6,
   },
   summaryBranchName: {
-    fontSize: 10,
-    fontFamily: "Times-Bold",
+    fontSize: 9,
+    fontFamily: "Linguistics Pro",
     lineHeight: 1.15,
   },
   summaryBranchAddress: {
@@ -395,13 +430,14 @@ const styles = StyleSheet.create({
     textShadowRadius: 0,
   },
   activityTitle: {
-    fontSize: 15,
-    fontFamily: "Times-Bold",
+    fontSize: 14,
+    fontFamily: "Linguistics Pro",
     marginBottom: 5,
+    
   },
   continuationTitle: {
     fontSize: 16,
-    fontFamily: "Times-Bold",
+    fontFamily: "Linguistics Pro",
     marginBottom: 8,
   },
   tableHeaderRow: {
@@ -409,9 +445,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#000000",
     paddingBottom: 2,
-    paddingTop: 1,
+    paddingTop: 0.8,
     marginBottom: 0,
-    paddingHorizontal: 6,
+    paddingHorizontal: 1,
   },
   tableHeaderCell: {
     fontSize: 7.5,
@@ -440,14 +476,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: "#000000",
     paddingVertical: 1,
-    paddingHorizontal: 6,
+    paddingHorizontal: 1,
   },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 0.7,
     borderBottomColor: "#000000",
-    paddingVertical: 1,
-    paddingHorizontal: 6,
+    paddingVertical: 0.8,
+    paddingHorizontal: 1,
   },
   closingFooter: {
     borderTopWidth: 0.5,
@@ -461,7 +497,7 @@ const styles = StyleSheet.create({
   closingFooterRow: {
     flexDirection: "row",
     paddingBottom: 12,
-    paddingHorizontal: 6,
+    paddingHorizontal: 2,
   },
   closingFooterFeesRow: {
     flexDirection: "row",
@@ -470,7 +506,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     paddingTop: 4,
     paddingBottom: 6,
-    paddingHorizontal: 6,
+    paddingHorizontal: 2,
   },
   closingFooterLabel: {
     fontSize: 8,
@@ -491,10 +527,10 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0.2, height: 0.2 },
     textShadowRadius: 0,
   },
-  colDate: { width: "10%" },
+  colDate: { width: "8%" },
   colDesc: { width: "38%" },
-  colDebit: { width: "18%", textAlign: "right" },
-  colCredit: { width: "18%", textAlign: "right" },
+  colDebit: { width: "19%", textAlign: "right" },
+  colCredit: { width: "19%", textAlign: "right" },
   colBalance: { width: "16%", textAlign: "right" },
   cellText: {
     fontSize: 9,
@@ -537,208 +573,6 @@ function RBCLogo() {
         fill="#fff"
       />
     </Svg>
-  );
-}
-
-/* ----------------------------- */
-/* Statement Document Component  */
-/* ----------------------------- */
-function StatementDocument({ account, statement, transactions }) {
-  return (
-    <Document
-      title={`Business Account Statement - ${account.account_number || ""}`}
-    >
-      <Page size={[778, 1007]} style={styles.page}>
-        {/* Blue top bar */}
-        <View style={styles.topBar} />
-
-        <View style={styles.content}>
-          {/* â”€â”€ Header â”€â”€ */}
-          <View style={styles.headerRow}>
-            {/* LEFT */}
-            <View style={styles.headerLeft}>
-              <View style={styles.logoRow}>
-                <RBCLogo />
-                <View style={{ marginTop: 2 }}>
-                  {/* 1. Bold Bank Name (700 weight equivalent) */}
-                  <Text style={styles.bankName}>ROYAL BANK OF CANADA</Text>
-
-                  {/* 2. Regular Address Lines (400 weight equivalent) */}
-                  <Text style={styles.bankAddress}>
-                    P.O. BOX 4047 TERMINAL A
-                  </Text>
-
-                  {/* 3. Double-space before Postal Code as seen in the image */}
-                  <Text style={styles.bankAddress}>TORONTO ON M5W 1L5</Text>
-                </View>
-              </View>
-              <View style={styles.refLineRow}>
-                <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
-                <Text style={styles.refLineCode}>00203</Text>
-              </View>
-              <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
-              <Text style={styles.businessName}>51 NEWCASTLECRT</Text>
-              <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
-            </View>
-
-            {/* RIGHT */}
-            <View style={styles.headerRight}>
-              <Text style={styles.statementTitle}>
-                Business Account Statement
-              </Text>
-              <Text style={styles.dateRange}>
-                {formatDate(statement.start_date)} to{" "}
-                {formatDate(statement.end_date)}
-              </Text>
-              <View style={styles.statementDetails}>
-                <View style={styles.accountNumberRow}>
-                  <Text style={styles.accountNumberLabel}>Account number:</Text>
-                  <Text style={styles.accountNumberValue}>
-                   {formatStatementAccountNumber(account.account_number)}
-                  </Text>
-                </View>
-              <View style={styles.dividerBlack} />
-              <Text style={styles.reachUsTitle}>How to reach us:</Text>
-              <Text style={styles.reachUsContactText}>
-                Please contact your RBC Banking representative or call
-              </Text>
-              <View style={styles.reachUsTextRow}>
-                <Text style={styles.reachUsText}>
-                  1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>2-0
-                </Text>
-              </View>
-              <Text style={styles.reachUsText}>(1-800-769-2520)</Text>
-              <Text style={styles.reachUsWebsiteText}>
-                www.rbcroyalbank.com/business
-              </Text>
-              <View style={styles.dividerBlack} />
-              </View>
-            </View>
-          </View>
-
-          {/* â”€â”€ Account Summary â”€â”€ */}
-          <View style={styles.sectionDivider} />
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryTitle}>
-              Account Summary for this Period
-            </Text>
-            <Text style={styles.summaryAccountType}>
-              Royal Business Community Account{" "}
-              <Text style={styles.trademarkSuperscript}>®</Text>
-            </Text>
-            <Text style={styles.summaryBranchName}>Royal Bank of Canada</Text>
-            <Text style={styles.summaryBranchAddress}>
-              29 HURON ST, NEW HAMBURG, ON N3A 1K1
-            </Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                Opening Balance on {formatDate(statement.start_date)}
-              </Text>
-              <Text style={styles.summaryValue}>
-                $ {formatMoney(statement.opening_bal)}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                Total deposits & credits ({statement.total_deposit_count ?? ""})
-              </Text>
-              <Text style={styles.summaryValue}>
-                + {formatMoney(statement.total_deposits)}
-              </Text>
-            </View>
-            <View style={styles.summaryRowThick}>
-              <Text style={styles.summaryLabel}>
-                Total cheques & debits ({statement.total_debit_count ?? ""})
-              </Text>
-              <Text style={styles.summaryValue}>
-                - {formatMoney(Math.abs(statement.total_debits ?? 0))}
-              </Text>
-            </View>
-            <View style={styles.summaryRowLast}>
-              <Text style={styles.summaryLabelBold}>
-                Closing balance on {formatDate(statement.end_date)}
-              </Text>
-              <Text style={styles.summaryValueBold}>
-                = $ {formatMoney(statement.closing_bal)}
-              </Text>
-            </View>
-          </View>
-
-          {/* â”€â”€ Account Activity â”€â”€ */}
-          <View style={styles.sectionDividerFull} />
-          <View style={styles.sectionDividerFull} />
-          <Text style={styles.activityTitle}>Account Activity Details</Text>
-
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colDate]}>Date</Text>
-            <Text style={[styles.tableHeaderCell, styles.colDesc]}>
-              Description
-            </Text>
-            <Text
-              style={[
-                styles.tableHeaderCell,
-                styles.colDebit,
-                styles.tableHeaderDebitCell,
-              ]}
-            >
-              Cheques & Debits ($)
-            </Text>
-            <Text
-              style={[
-                styles.tableHeaderCell,
-                styles.colCredit,
-                styles.tableHeaderCreditCell,
-              ]}
-            >
-              Deposits & Credits ($)
-            </Text>
-            <Text style={[styles.tableHeaderCell, styles.colBalance]}>
-              Balance ($)
-            </Text>
-          </View>
-
-          <View style={styles.openingRow}>
-            <Text style={[styles.openingBalanceText, styles.colDate]}></Text>
-            <Text style={[styles.openingBalanceText, styles.colDesc]}>
-              Opening Balance
-            </Text>
-            <Text style={[styles.openingBalanceText, styles.colDebit]}></Text>
-            <Text style={[styles.openingBalanceText, styles.colCredit]}></Text>
-            <Text style={[styles.openingBalanceText, styles.colBalance]}>
-              {formatMoney(statement.opening_bal)}
-            </Text>
-          </View>
-
-          {transactions.map((t, i) => {
-            const dateLabel = (() => {
-              // track last date inline
-              return formatShortDate(t.date);
-            })();
-            return (
-              <View key={i} style={styles.tableRow}>
-                <Text style={[styles.cellText, styles.colDate]}>
-                  {i === 0 || transactions[i - 1]?.date !== t.date
-                    ? formatShortDate(t.date)
-                    : ""}
-                </Text>
-                <Text style={[styles.cellText, styles.colDesc]}>
-                  {t.description ?? ""}
-                </Text>
-                <Text style={[styles.cellText, styles.colDebit]}>
-                  {(t.debit ?? 0) > 0 ? formatMoney(t.debit) : ""}
-                </Text>
-                <Text style={[styles.cellText, styles.colCredit]}>
-                  {(t.credit ?? 0) > 0 ? formatMoney(t.credit) : ""}
-                </Text>
-                <Text style={[styles.cellText, styles.colBalance]}>
-                  {formatMoney(t.balance_after)}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </Page>
-    </Document>
   );
 }
 
@@ -827,7 +661,7 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
               Account Summary for this Period
             </Text>
             <Text style={styles.summaryAccountType}>
-              Royal Business Account{" "}
+              Royal Business Community Account{" "}
               <Text style={styles.trademarkSuperscript}>®</Text>
             </Text>
             <Text style={styles.summaryBranchName}>Royal Bank of Canada</Text>

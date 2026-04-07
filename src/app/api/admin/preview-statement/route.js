@@ -10,8 +10,8 @@ export async function GET() {
   };
 
   const statement = {
-    start_date: "2026-01-20",
-    end_date: "2026-02-19",
+    start_date: "2026-02-20",
+    end_date: "2026-03-19",
     opening_bal: 3072.46,
     closing_bal: 3718.45,
     total_deposits: 40362.94,
