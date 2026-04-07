@@ -12,30 +12,33 @@ import {
   Path,
   renderToBuffer,
 } from "@react-pdf/renderer";
-const arialNarrowBoldPath = path.join(
-  process.cwd(),
-  "public",
-  "fonts",
-  "ArialNarrow-Bold.ttf",
-);
-const arialNarrowRegularPath = path.join(
-  process.cwd(),
-  "public",
-  "fonts",
-  "ArialNarrow-Regular.ttf",
-);
+const pdfFontRoot = path.join(process.cwd(), "public", "fonts");
+
+const arialNarrowBoldPath = path.join(pdfFontRoot, "ArialNarrow-Bold.ttf");
+const arialNarrowRegularPath = path.join(pdfFontRoot, "ArialNarrow-Regular.ttf");
 const sourceSansRegularPath = path.join(
-  process.cwd(),
-  "public",
-  "fonts",
+  pdfFontRoot,
   "source-sans-3-latin-400-normal.woff",
 );
 const sourceSansBoldPath = path.join(
-  process.cwd(),
-  "public",
-  "fonts",
+  pdfFontRoot,
   "source-sans-3-latin-700-normal.woff",
 );
+const metaCorrespondenceRegularPath = path.join(
+  pdfFontRoot,
+  "Meta Correspondence W07 Regular.ttf",
+);
+const metaCorrespondenceBoldPath = path.join(
+  pdfFontRoot,
+  "Meta-Correspondence-W07-Bold.ttf",
+);
+const ocrBRegularPath = path.join(pdfFontRoot, "OCR-B.ttf");
+const linguisticsProBoldPath = path.join(
+  pdfFontRoot,
+  "LinguisticsPro-Bold.otf",
+);
+const firaSansRegularPath = path.join(pdfFontRoot, "FiraSans-Regular.otf");
+const firaSansBoldPath = path.join(pdfFontRoot, "FiraSans-Bold.otf");
 
 if (existsSync(arialNarrowRegularPath) && existsSync(arialNarrowBoldPath)) {
   Font.register({
@@ -75,6 +78,71 @@ if (existsSync(sourceSansRegularPath) && existsSync(sourceSansBoldPath)) {
   );
 }
 
+if (existsSync(firaSansRegularPath) && existsSync(firaSansBoldPath)) {
+  Font.register({
+    family: "Fira Sans",
+    fonts: [
+      { src: firaSansRegularPath, fontWeight: 400 },
+      { src: firaSansBoldPath, fontWeight: 700 },
+    ],
+  });
+} else if (existsSync(firaSansRegularPath)) {
+  Font.register({
+    family: "Fira Sans",
+    src: firaSansRegularPath,
+  });
+} else if (existsSync(firaSansBoldPath)) {
+  Font.register({
+    family: "Fira Sans",
+    src: firaSansBoldPath,
+  });
+} else {
+  console.warn(
+    `PDF font missing: ${firaSansRegularPath} and ${firaSansBoldPath}`,
+  );
+}
+
+if (
+  existsSync(metaCorrespondenceRegularPath) &&
+  existsSync(metaCorrespondenceBoldPath)
+) {
+  Font.register({
+    family: "Meta Correspondence W07",
+    fonts: [
+      { src: metaCorrespondenceRegularPath, fontWeight: 400 },
+      { src: metaCorrespondenceBoldPath, fontWeight: 700 },
+      { src: metaCorrespondenceBoldPath, fontWeight: 900 },
+    ],
+  });
+} else if (existsSync(metaCorrespondenceRegularPath)) {
+  Font.register({
+    family: "Meta Correspondence W07",
+    src: metaCorrespondenceRegularPath,
+  });
+} else {
+  console.warn(
+    `PDF font missing: ${metaCorrespondenceRegularPath} or ${metaCorrespondenceBoldPath}`,
+  );
+}
+
+if (existsSync(ocrBRegularPath)) {
+  Font.register({
+    family: "OCR-B",
+    src: ocrBRegularPath,
+  });
+} else {
+  console.warn(`PDF font missing: ${ocrBRegularPath}`);
+}
+
+if (existsSync(linguisticsProBoldPath)) {
+  Font.register({
+    family: "Linguistics Pro",
+    src: linguisticsProBoldPath,
+  });
+} else {
+  console.warn(`PDF font missing: ${linguisticsProBoldPath}`);
+}
+
 /* ----------------------------- */
 /* Styles                        */
 /* ----------------------------- */
@@ -85,7 +153,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 20,
     paddingHorizontal: 0,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FAFAFA",
   },
   topBar: {
     backgroundColor: "#005DAA",
@@ -93,8 +161,10 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   content: {
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     paddingTop: 28,
+    marginLeft: 25,
+    
   },
   pageNumber: {
     position: "absolute",
@@ -119,13 +189,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   statementDetails: {
-    width: 216,
+    width: 200,
   },
   logoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 16,
-    paddingLeft: 36,
+    paddingLeft: 18,
   },
   logoBox: { width: 32, height: 42, marginRight: 4 },
   bankName: {
@@ -146,7 +216,8 @@ const styles = StyleSheet.create({
   refLine: {
     fontSize: 7,
     color: "#000000",
-    fontFamily: "Courier-Bold",
+    fontFamily: "Fira Sans",
+    fontWeight: 400,
     letterSpacing: -0.1,
   },
   refLineRow: {
@@ -154,33 +225,34 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     marginBottom: 1,
     marginTop: 12,
-    marginLeft: 32,
+    marginLeft: 14,
   },
   refLineCode: {
-    fontSize: 9,
-    fontFamily: "Courier-Bold",
+    fontSize: 7,
+    fontFamily: "OCR-B",
+    fontWeight: 700,
     color:'#000000',
     marginLeft: 14,
     letterSpacing: 0.2,
   },
   businessName: {
     fontSize: 11,
-    fontFamily: "Arial Narrow",
-    fontWeight: 400,
+    fontFamily: "Fira Sans",
+    fontWeight: 500,
     lineHeight: 1.2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.1,
     color:'#000000',
-    marginLeft: 32,
+    marginLeft: 14,
   },
   statementTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontFamily: "Times-Bold",
     textAlign: "right",
-    marginBottom: 28,
+    marginBottom: 25,
   
   },
   dateRange: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Times-Roman",
     textAlign: "right",
     marginBottom: 6,
@@ -190,43 +262,55 @@ const styles = StyleSheet.create({
   accountNumberRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   accountNumberLabel: { fontSize: 12, fontFamily: "Times-Bold" },
   accountNumberValue: {
-    fontSize: 12,
-    fontFamily: "Times-Bold",
-    letterSpacing: 0.3,
+    fontSize: 11,
+    fontFamily: "Linguistics Pro",
+    letterSpacing: 0.1,
   },
   dividerBlack: {
     borderBottomWidth: 1,
     borderBottomColor: "#000000",
     marginVertical: 4,
   },
-  reachUsTitle: { fontSize: 11, fontFamily: "Times-Bold", marginBottom: 1 },
+  reachUsTitle: {
+    fontSize: 11,
+    fontFamily: "Times-Bold",
+    marginBottom: 1,
+    letterSpacing: -0.1,
+  },
   reachUsText: {
     fontSize: 11,
     fontFamily: "Times-Roman",
     lineHeight: 1,
     textAlign: "right",
+    letterSpacing: -0.2,
+  },
+  reachUsTextRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignSelf: "stretch",
   },
   trademarkSuperscript: {
-    fontSize: 8,
+    fontSize: 6.5,
     lineHeight: 1,
-    position: "relative",
-    top: -5,
+    verticalAlign: "super",
   },
   reachUsContactText: {
     fontSize: 9.5,
     fontFamily: "Times-Roman",
     lineHeight: 1,
     textAlign: "left",
+    letterSpacing: -0.2,
   },
   reachUsWebsiteText: {
     fontSize: 9,
     fontFamily: "Times-Roman",
     lineHeight: 1,
     textAlign: "right",
+    letterSpacing: -0.2,
   },
   sectionDivider: {
     borderTopWidth: 1,
@@ -250,22 +334,27 @@ const styles = StyleSheet.create({
   summaryBranchName: {
     fontSize: 10,
     fontFamily: "Times-Bold",
-    lineHeight: 1.4,
+    lineHeight: 1.15,
   },
-  summaryBranchAddress: { fontSize: 8, fontFamily: "Times-Roman", lineHeight: 1.4, marginBottom: 3 },
+  summaryBranchAddress: {
+    fontSize: 8,
+    fontFamily: "Times-Roman",
+    lineHeight: 1.15,
+    marginBottom: 3,
+  },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 2,
     borderBottomWidth: 1,
-    borderBottomColor: "#cccccc",
+    borderBottomColor: "#000000",
   },
   summaryRowThick: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 2,
     borderBottomWidth: 1,
-    borderBottomColor: "#333333",
+    borderBottomColor: "#000000",
   },
   summaryRowLast: {
     flexDirection: "row",
@@ -273,14 +362,37 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     marginBottom: 20,
   },
-  summaryLabel: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 500 },
-  summaryValue: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 500, textAlign: "right" },
-  summaryLabelBold: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 700 },
+  summaryLabel: {
+    fontSize: 9,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 500,
+    color: "#000000",
+    textShadowColor: "#000000",
+  },
+  summaryValue: {
+    fontSize: 9,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 500,
+    textAlign: "right",
+  },
+  summaryLabelBold: {
+    fontSize: 9,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 900,
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.2, height: 0.2 },
+    textShadowRadius: 0,
+  },
   summaryValueBold: {
     fontSize: 9,
-    fontFamily: "Source Sans 3",
+    fontFamily: "Meta Correspondence W07",
     fontWeight: 700,
     textAlign: "right",
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.2, height: 0.2 },
+    textShadowRadius: 0,
   },
   activityTitle: {
     fontSize: 15,
@@ -296,26 +408,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#000000",
-    paddingBottom: 4,
-    paddingTop: 2,
+    paddingBottom: 2,
+    paddingTop: 1,
     marginBottom: 0,
+    paddingHorizontal: 6,
   },
-  tableHeaderCell: { fontSize: 7.5, fontFamily: "Source Sans 3", fontWeight: 700 },
+  tableHeaderCell: {
+    fontSize: 7.5,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 700,
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.4, height: 0.4 },
+    textShadowRadius: 0,
+  },
+  openingBalanceText: {
+    fontSize: 9,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 700,
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.4, height: 0.4 },
+    textShadowRadius: 0,
+  },
   tableHeaderDebitCell: { paddingRight: 4 },
   tableHeaderCreditCell: { paddingLeft: 4 },
   openingRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: "#4d4d4d",
+    borderBottomColor: "#000000",
     borderTopWidth: 0.5,
-    borderTopColor: "#4d4d4d",
-    paddingVertical: 2,
+    borderTopColor: "#000000",
+    paddingVertical: 1,
+    paddingHorizontal: 6,
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#7a7a7a",
-    paddingVertical: 2,
+    borderBottomWidth: 0.7,
+    borderBottomColor: "#000000",
+    paddingVertical: 1,
+    paddingHorizontal: 6,
   },
   closingFooter: {
     borderTopWidth: 0.5,
@@ -329,6 +461,7 @@ const styles = StyleSheet.create({
   closingFooterRow: {
     flexDirection: "row",
     paddingBottom: 12,
+    paddingHorizontal: 6,
   },
   closingFooterFeesRow: {
     flexDirection: "row",
@@ -337,25 +470,46 @@ const styles = StyleSheet.create({
     marginTop: 2,
     paddingTop: 4,
     paddingBottom: 6,
+    paddingHorizontal: 6,
   },
   closingFooterLabel: {
     fontSize: 8,
-    fontFamily: "Source Sans 3",
+    fontFamily: "Meta Correspondence W07",
     fontWeight: 700,
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.2, height: 0.2 },
+    textShadowRadius: 0,
   },
   closingFooterValue: {
     fontSize: 8,
-    fontFamily: "Source Sans 3",
+    fontFamily: "Meta Correspondence W07",
     fontWeight: 700,
     textAlign: "right",
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.2, height: 0.2 },
+    textShadowRadius: 0,
   },
   colDate: { width: "10%" },
   colDesc: { width: "38%" },
   colDebit: { width: "18%", textAlign: "right" },
   colCredit: { width: "18%", textAlign: "right" },
   colBalance: { width: "16%", textAlign: "right" },
-  cellText: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 500 },
-  cellTextBold: { fontSize: 9, fontFamily: "Source Sans 3", fontWeight: 700 },
+  cellText: {
+    fontSize: 9,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 500,
+  },
+  cellTextBold: {
+    fontSize: 9,
+    fontFamily: "Meta Correspondence W07",
+    fontWeight: 700,
+    color: "#000000",
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0.2, height: 0.2 },
+    textShadowRadius: 0,
+  },
 });
 
 /* ----------------------------- */
@@ -394,7 +548,7 @@ function StatementDocument({ account, statement, transactions }) {
     <Document
       title={`Business Account Statement - ${account.account_number || ""}`}
     >
-      <Page size="A4" style={styles.page}>
+      <Page size={[778, 1007]} style={styles.page}>
         {/* Blue top bar */}
         <View style={styles.topBar} />
 
@@ -448,9 +602,11 @@ function StatementDocument({ account, statement, transactions }) {
               <Text style={styles.reachUsContactText}>
                 Please contact your RBC Banking representative or call
               </Text>
-              <Text style={styles.reachUsText}>
-                1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>2-0
-              </Text>
+              <View style={styles.reachUsTextRow}>
+                <Text style={styles.reachUsText}>
+                  1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>2-0
+                </Text>
+              </View>
               <Text style={styles.reachUsText}>(1-800-769-2520)</Text>
               <Text style={styles.reachUsWebsiteText}>
                 www.rbcroyalbank.com/business
@@ -467,7 +623,8 @@ function StatementDocument({ account, statement, transactions }) {
               Account Summary for this Period
             </Text>
             <Text style={styles.summaryAccountType}>
-              Royal Business Account ®
+              Royal Business Community Account{" "}
+              <Text style={styles.trademarkSuperscript}>®</Text>
             </Text>
             <Text style={styles.summaryBranchName}>Royal Bank of Canada</Text>
             <Text style={styles.summaryBranchAddress}>
@@ -536,18 +693,18 @@ function StatementDocument({ account, statement, transactions }) {
               Deposits & Credits ($)
             </Text>
             <Text style={[styles.tableHeaderCell, styles.colBalance]}>
-              Balance
+              Balance ($)
             </Text>
           </View>
 
           <View style={styles.openingRow}>
-            <Text style={[styles.cellTextBold, styles.colDate]}></Text>
-            <Text style={[styles.cellTextBold, styles.colDesc]}>
+            <Text style={[styles.openingBalanceText, styles.colDate]}></Text>
+            <Text style={[styles.openingBalanceText, styles.colDesc]}>
               Opening Balance
             </Text>
-            <Text style={[styles.cellTextBold, styles.colDebit]}></Text>
-            <Text style={[styles.cellTextBold, styles.colCredit]}></Text>
-            <Text style={[styles.cellTextBold, styles.colBalance]}>
+            <Text style={[styles.openingBalanceText, styles.colDebit]}></Text>
+            <Text style={[styles.openingBalanceText, styles.colCredit]}></Text>
+            <Text style={[styles.openingBalanceText, styles.colBalance]}>
               {formatMoney(statement.opening_bal)}
             </Text>
           </View>
@@ -624,9 +781,9 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
                 <Text style={styles.refLineCode}>00203</Text>
               </View>
-              <Text style={styles.businessName}>1000836779 Ontario Ltd.</Text>
-              <Text style={styles.businessName}>51 NEWCASTLECRT</Text>
-              <Text style={styles.businessName}>KITCHENER ON N2R0G7</Text>
+              <Text style={styles.businessName}>1000836779 Ontario Ltd 33.</Text>
+              <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
+              <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
             </View>
 
             <View style={styles.headerRight}>
@@ -649,9 +806,12 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 <Text style={styles.reachUsContactText}>
                   Please contact your RBC Banking representative or call
                 </Text>
-                <Text style={styles.reachUsText}>
-                  1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>2-0
-                </Text>
+                <View style={styles.reachUsTextRow}>
+                  <Text style={styles.reachUsText}>
+                    1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>
+                    2-0
+                  </Text>
+                </View>
                 <Text style={styles.reachUsText}>(1-800-769-2520)</Text>
                 <Text style={styles.reachUsWebsiteText}>
                   www.rbcroyalbank.com/business
@@ -667,7 +827,8 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
               Account Summary for this Period
             </Text>
             <Text style={styles.summaryAccountType}>
-              Royal Business Account ®
+              Royal Business Account{" "}
+              <Text style={styles.trademarkSuperscript}>®</Text>
             </Text>
             <Text style={styles.summaryBranchName}>Royal Bank of Canada</Text>
             <Text style={styles.summaryBranchAddress}>
@@ -787,16 +948,20 @@ function ActivityTable({
         >
           Deposits & Credits ($)
         </Text>
-        <Text style={[styles.tableHeaderCell, styles.colBalance]}>Balance</Text>
+        <Text style={[styles.tableHeaderCell, styles.colBalance]}>
+          Balance ($)
+        </Text>
       </View>
 
       {includeOpeningBalance ? (
         <View style={styles.openingRow}>
-          <Text style={[styles.cellTextBold, styles.colDate]} />
-          <Text style={[styles.cellTextBold, styles.colDesc]}>Opening Balance</Text>
-          <Text style={[styles.cellTextBold, styles.colDebit]} />
-          <Text style={[styles.cellTextBold, styles.colCredit]} />
-          <Text style={[styles.cellTextBold, styles.colBalance]}>
+          <Text style={[styles.openingBalanceText, styles.colDate]} />
+          <Text style={[styles.openingBalanceText, styles.colDesc]}>
+            Opening Balance
+          </Text>
+          <Text style={[styles.openingBalanceText, styles.colDebit]} />
+          <Text style={[styles.openingBalanceText, styles.colCredit]} />
+          <Text style={[styles.openingBalanceText, styles.colBalance]}>
             {formatMoney(openingBalance)}
           </Text>
         </View>
@@ -922,7 +1087,7 @@ function formatStatementAccountNumber(value) {
   if (digits.length === 12) {
     const transit = digits.slice(0, 5);
     const account = digits.slice(5); // 7 digits
-    return `${transit} ${account.slice(0, 3)}-${account.slice(3, 6)}-${account.slice(6)}`;
+    return `${transit}   ${account.slice(0, 3)}-${account.slice(3, 6)}-${account.slice(6)}`;
   }
 
   return raw;
@@ -937,8 +1102,3 @@ function chunkArray(items, chunkSize) {
 
   return chunks;
 }
-
-
-
-
-
