@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Info, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function LeftPanel() {
+export default function LeftPanel({ onLoaded }) {
   const [accounts, setAccounts] = useState([]);
   const [userName, setUserName] = useState("");
   const [totalBalance, setTotalBalance] = useState(0);
@@ -29,7 +29,7 @@ export default function LeftPanel() {
     const loadAccounts = async () => {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
-
+ 
         if (!sessionData?.session) return;
 
         const userId = sessionData.session.user.id;
@@ -67,11 +67,12 @@ export default function LeftPanel() {
         }
       } catch (err) {
         console.error("Error loading accounts:", err);
+      } finally {
+        setLoading(false);
+        onLoaded?.();
       }
-
-      setLoading(false);
     };
-
+ 
     loadAccounts();
   }, []);
 

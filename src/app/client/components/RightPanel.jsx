@@ -4,32 +4,40 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { ExternalLink, Calendar } from "lucide-react";
 
-export default function RightDashboard() {
+export default function RightDashboard({ onLoaded }) {
   const [userName, setUserName] = useState("");
   const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadUserData = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
 
-      if (!sessionData?.session) return;
+        if (!sessionData?.session) return;
 
-      const userId = sessionData.session.user.id;
+        const userId = sessionData.session.user.id;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("id", userId)
-        .single();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", userId)
+          .single();
 
-      if (profile) setUserName(profile.name);
+        if (profile) setUserName(profile.name);
 
-      const { data: accountData } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("user_id", userId);
+        const { data: accountData } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("user_id", userId);
 
-      if (accountData) setAccounts(accountData);
+        if (accountData) setAccounts(accountData);
+      } catch (err) {
+        console.error("Error loading dashboard panel:", err);
+      } finally {
+        setLoading(false);
+        onLoaded?.();
+      }
     };
 
     loadUserData();
@@ -65,11 +73,12 @@ export default function RightDashboard() {
             <label className="block text-gray-800 mb-1">From</label>
 
             <select className="w-full bg-white text-gray-600 border p-2">
-              {accounts.map((account) => (
+              {!loading &&
+                accounts.map((account) => (
                 <option key={account.id}>
                   {userName} = ${account.balance}
                 </option>
-              ))}
+                ))}
             </select>
           </div>
 

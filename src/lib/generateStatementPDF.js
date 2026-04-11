@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import path from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import {
   Document,
   Font,
@@ -10,12 +10,27 @@ import {
   StyleSheet,
   Svg,
   Path,
+  Image,
   renderToBuffer,
 } from "@react-pdf/renderer";
 const pdfFontRoot = path.join(process.cwd(), "public", "fonts");
 
+let businessNameImageBase64 = null;
+try {
+  const businessImageLoc = path.join(process.cwd(), "public", "bussinessname.png");
+  if (existsSync(businessImageLoc)) {
+    const buffer = readFileSync(businessImageLoc);
+    businessNameImageBase64 = `data:image/png;base64,${buffer.toString("base64")}`;
+  }
+} catch (err) {
+  console.warn("Could not load bussinessname.png", err);
+}
+
 const arialNarrowBoldPath = path.join(pdfFontRoot, "ArialNarrow-Bold.ttf");
-const arialNarrowRegularPath = path.join(pdfFontRoot, "ArialNarrow-Regular.ttf");
+const arialNarrowRegularPath = path.join(
+  pdfFontRoot,
+  "ArialNarrow-Regular.ttf",
+);
 const sourceSansRegularPath = path.join(
   pdfFontRoot,
   "source-sans-3-latin-400-normal.woff",
@@ -138,7 +153,10 @@ if (existsSync(ocrBRegularPath)) {
   console.warn(`PDF font missing: ${ocrBRegularPath}`);
 }
 
-if (existsSync(linguisticsProRegularPath) && existsSync(linguisticsProBoldPath)) {
+if (
+  existsSync(linguisticsProRegularPath) &&
+  existsSync(linguisticsProBoldPath)
+) {
   Font.register({
     family: "Linguistics Pro",
     fonts: [
@@ -180,7 +198,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 20,
     paddingHorizontal: 0,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#FFFFFF",
   },
   topBar: {
     backgroundColor: "#005DAA",
@@ -191,7 +209,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 24,
     marginLeft: 25,
-    
   },
   pageNumber: {
     position: "absolute",
@@ -200,7 +217,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontFamily: "Meta Correspondence W07",
     color: "#333333",
-    fontWeight:600,
+    fontWeight: 600,
   },
   headerRow: {
     flexDirection: "row",
@@ -250,7 +267,7 @@ const styles = StyleSheet.create({
   refLineRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginBottom: 1,
+    marginBottom: 0.5,
     marginTop: 6,
     marginLeft: 20,
   },
@@ -258,25 +275,26 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontFamily: "OCR-B",
     fontWeight: 700,
-    color:'#000000',
+    color: "#000000",
     marginLeft: 14,
     letterSpacing: 0.2,
   },
   businessName: {
     fontSize: 11,
-    fontFamily: "Fira Sans",
+    fontFamily: "Meta Correspondence W07",
     fontWeight: 500,
     lineHeight: 1.1,
     letterSpacing: -0.2,
-    color:'#000000',
+    color: "#000000",
     marginLeft: 19,
+
+    fontSynthesis: "none",
   },
   statementTitle: {
     fontSize: 19,
     fontFamily: "Times-Bold",
     textAlign: "right",
     marginBottom: 25,
-  
   },
   dateRange: {
     fontSize: 12,
@@ -292,12 +310,14 @@ const styles = StyleSheet.create({
   },
   accountNumberLabel: {
     fontSize: 11,
-     fontFamily: "Linguistics Pro",
+    fontFamily: "Linguistics Pro",
+    fontWeight: 700,
     letterSpacing: -0.1,
   },
   accountNumberValue: {
     fontSize: 11,
     fontFamily: "Linguistics Pro",
+    fontWeight: 700,
     letterSpacing: 0.1,
     paddingLeft: 22,
   },
@@ -311,15 +331,15 @@ const styles = StyleSheet.create({
     fontFamily: "Linguistics Pro",
     marginBottom: 1,
     letterSpacing: -0.1,
-    fontWeight:600,
+    fontWeight: 600,
   },
   reachUsText: {
     fontSize: 11,
-     fontFamily: "Linguistics Pro Regular",
+    fontFamily: "Linguistics Pro Regular",
     lineHeight: 1,
     textAlign: "right",
     letterSpacing: 0.2,
-    marginBottom:1,
+    marginBottom: 1,
   },
   reachUsTextRow: {
     flexDirection: "row",
@@ -360,15 +380,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   summaryContainer: { width: "60%", marginBottom: 24 },
-  summaryTitle: { fontSize: 14,   fontFamily: "Linguistics Pro", marginBottom: 6 },
+  summaryTitle: {
+    fontSize: 14,
+    fontFamily: "Linguistics Pro",
+    fontWeight: 700,
+    marginBottom: 6,
+  },
   summaryAccountType: {
     fontSize: 9,
     fontFamily: "Linguistics Pro",
+    fontWeight: 700,
     marginBottom: 6,
   },
   summaryBranchName: {
     fontSize: 9,
     fontFamily: "Linguistics Pro",
+    fontWeight: 700,
     lineHeight: 1.15,
   },
   summaryBranchAddress: {
@@ -381,7 +408,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 2,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.8,
     borderBottomColor: "#000000",
   },
   summaryRowThick: {
@@ -432,17 +459,18 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 14,
     fontFamily: "Linguistics Pro",
+    fontWeight: 700,
     marginBottom: 5,
-    
   },
   continuationTitle: {
     fontSize: 16,
     fontFamily: "Linguistics Pro",
+    fontWeight: 700,
     marginBottom: 8,
   },
   tableHeaderRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.8,
     borderBottomColor: "#000000",
     paddingBottom: 2,
     paddingTop: 0.8,
@@ -471,45 +499,43 @@ const styles = StyleSheet.create({
   tableHeaderCreditCell: { paddingLeft: 4 },
   openingRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.8,
     borderBottomColor: "#000000",
-    borderTopWidth: 0.5,
-    borderTopColor: "#000000",
     paddingVertical: 1,
     paddingHorizontal: 1,
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 0.7,
+    borderBottomWidth: 0.8,
     borderBottomColor: "#000000",
     paddingVertical: 0.8,
     paddingHorizontal: 1,
   },
   closingFooter: {
-    borderTopWidth: 0.5,
+    borderTopWidth: 0,
     borderTopColor: "#000000",
-    borderBottomWidth: 0.75,
+    borderBottomWidth: 0.8,
     borderBottomColor: "#000000",
     marginTop: 0,
-    paddingTop: 4,
+    paddingTop: 0,
     paddingBottom: 4,
   },
   closingFooterRow: {
     flexDirection: "row",
-    paddingBottom: 12,
+    paddingBottom: 10,
     paddingHorizontal: 2,
   },
   closingFooterFeesRow: {
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#7a7a7a",
-    marginTop: 2,
+    borderTopColor: "#000000",
+    marginTop: 5,
     paddingTop: 4,
     paddingBottom: 6,
     paddingHorizontal: 2,
   },
   closingFooterLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontFamily: "Meta Correspondence W07",
     fontWeight: 700,
     color: "#000000",
@@ -518,7 +544,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 0,
   },
   closingFooterValue: {
-    fontSize: 8,
+    fontSize: 9,
     fontFamily: "Meta Correspondence W07",
     fontWeight: 700,
     textAlign: "right",
@@ -580,7 +606,10 @@ const FIRST_PAGE_TRANSACTION_COUNT = 15;
 const CONTINUATION_PAGE_TRANSACTION_COUNT = 39;
 
 function PaginatedStatementDocument({ account, statement, transactions }) {
-  const firstPageTransactions = transactions.slice(0, FIRST_PAGE_TRANSACTION_COUNT);
+  const firstPageTransactions = transactions.slice(
+    0,
+    FIRST_PAGE_TRANSACTION_COUNT,
+  );
   const continuationPages = chunkArray(
     transactions.slice(FIRST_PAGE_TRANSACTION_COUNT),
     CONTINUATION_PAGE_TRANSACTION_COUNT,
@@ -595,7 +624,9 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
         <Text
           fixed
           style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `${pageNumber} of ${totalPages}`}
+          render={({ pageNumber, totalPages }) =>
+            `${pageNumber} of ${totalPages}`
+          }
         />
 
         <View style={styles.content}>
@@ -615,9 +646,18 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
                 <Text style={styles.refLineCode}>00203</Text>
               </View>
-              <Text style={styles.businessName}>1000836779 Ontario Ltd 33.</Text>
-              <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
-              <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
+              {businessNameImageBase64 ? (
+                <Image
+                  src={businessNameImageBase64}
+                  style={{ width: 135, marginLeft: 19, marginTop: 2, marginBottom: 2 }}
+                />
+              ) : (
+                <>
+                  <Text style={styles.businessName}>1000836779 ONTARIO LTD</Text>
+                  <Text style={styles.businessName}>51 NEWCASTLE CRT</Text>
+                  <Text style={styles.businessName}>KITCHENER ON N2R 0G7</Text>
+                </>
+              )}
             </View>
 
             <View style={styles.headerRight}>
@@ -642,7 +682,8 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 </Text>
                 <View style={styles.reachUsTextRow}>
                   <Text style={styles.reachUsText}>
-                    1-800-Royal<Text style={styles.trademarkSuperscript}>®</Text>
+                    1-800-Royal
+                    <Text style={styles.trademarkSuperscript}>®</Text>
                     2-0
                   </Text>
                 </View>
@@ -670,7 +711,7 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
             </Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>
-                Opening Balance on {formatDate(statement.start_date)}
+                Opening balance on {formatDate(statement.start_date)}
               </Text>
               <Text style={styles.summaryValue}>
                 ${formatMoney(statement.opening_bal)}
@@ -763,7 +804,9 @@ function ActivityTable({
     <>
       <View style={styles.tableHeaderRow}>
         <Text style={[styles.tableHeaderCell, styles.colDate]}>Date</Text>
-        <Text style={[styles.tableHeaderCell, styles.colDesc]}>Description</Text>
+        <Text style={[styles.tableHeaderCell, styles.colDesc]}>
+          Description
+        </Text>
         <Text
           style={[
             styles.tableHeaderCell,
@@ -791,7 +834,7 @@ function ActivityTable({
         <View style={styles.openingRow}>
           <Text style={[styles.openingBalanceText, styles.colDate]} />
           <Text style={[styles.openingBalanceText, styles.colDesc]}>
-            Opening Balance
+            Opening balance
           </Text>
           <Text style={[styles.openingBalanceText, styles.colDebit]} />
           <Text style={[styles.openingBalanceText, styles.colCredit]} />
@@ -837,7 +880,7 @@ function ClosingFooter({ closingBalance }) {
       <View style={styles.closingFooterRow}>
         <Text style={[styles.cellTextBold, styles.colDate]} />
         <Text style={[styles.closingFooterLabel, styles.colDesc]}>
-          Closing Balance
+          Closing balance
         </Text>
         <Text style={[styles.cellTextBold, styles.colDebit]} />
         <Text style={[styles.cellTextBold, styles.colCredit]} />
@@ -898,7 +941,7 @@ function formatDate(dateStr) {
 
 function formatShortDate(dateStr) {
   if (!dateStr) return "";
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-CA", {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
   });
