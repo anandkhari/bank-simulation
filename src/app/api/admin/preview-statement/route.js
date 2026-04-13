@@ -4,37 +4,46 @@ import { generateStatementPDF } from "@/lib/generateStatementPDF";
 export async function GET() {
   const account = {
     account_number: "03282 100-140-3",
-    name: "1000836779 Ontario Ltd.",
+    name: "MUSIC4CHARITY FOUNDATION",
     address_line1: "51 NEWCASTLE CRT",
     address_line2: "KITCHENER ON N2R 0G7",
   };
 
   const statement = {
-    start_date: "2026-02-20",
+    start_date: "2026-02-19",
     end_date: "2026-03-19",
-    opening_bal: 3072.46,
-    closing_bal: 3718.45,
-    total_deposits: 40362.94,
-    total_deposit_count: 39,
-    total_debits: 39716.95,
-    total_debit_count: 20,
+    opening_bal: -7.51,
+    closing_bal: 18.73,
+    account_fees: 3.75,
+    total_deposits: 30.0,
+    total_deposit_count: 1,
+    total_debits: 3.76,
+    total_debit_count: 2,
   };
 
-  // Generating 65 dummy transactions to test pagination (15 on P1, ~39 on P2, remainder on P3)
-  const transactions = Array.from({ length: 65 }, (_, i) => {
-    const isDebit = i % 3 === 0; // Create a mix of debits and credits
-    const amount = parseFloat((Math.random() * 1000 + 10).toFixed(2));
-    
-    return {
-      date: i < 30 ? "2026-01-20" : i < 55 ? "2026-01-21" : "2026-01-22",
-      description: isDebit 
-        ? `ATM Withdrawal - ${Math.random().toString(36).substring(7).toUpperCase()}`
-        : `e-Transfer - Autodeposit ${i % 2 === 0 ? "ABUL AZAD" : "RINI MOLLAH"}`,
-      debit: isDebit ? amount : 0,
-      credit: isDebit ? 0 : amount,
-      balance_after: 5000.00 + i * 10, // Dummy incrementing balance
-    };
-  });
+  const transactions = [
+    {
+      date: "2026-02-20",
+      description: "e-Transfer received SOHELLYYOIJSUF",
+      debit: 0,
+      credit: 30.0,
+      balance_after: 22.49,
+    },
+    {
+      date: "2026-03-02",
+      description: "Monthly fee",
+      debit: 3.75,
+      credit: 0,
+      balance_after: 18.74,
+    },
+    {
+      date: "2026-03-17",
+      description: "Overdraft interest @ RBP+05.00%P.A",
+      debit: 0.01,
+      credit: 0,
+      balance_after: 18.73,
+    },
+  ];
 
   try {
     const pdfBuffer = await generateStatementPDF({ account, statement, transactions });

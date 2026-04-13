@@ -241,7 +241,21 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingLeft: 24,
   },
-  logoBox: { width: 32, height: 42, marginRight: 4 },
+  logoWrapper: {
+    position: "relative",
+    width: 32,
+    height: 46,
+    marginRight: 2,
+  },
+  logoBox: { width: 32, height: 42, marginRight: 3 },
+  logoTrademark: {
+    position: "absolute",
+    right: 0,
+    bottom: 7,
+    fontSize: 4.5,
+    color: "#7A8FD8",
+    fontFamily: "Helvetica",
+  },
   bankName: {
     fontSize: 8.5, // Slightly larger to show authority
     fontFamily: "Times-Bold", // High-contrast serif bold
@@ -258,11 +272,14 @@ const styles = StyleSheet.create({
     fontWeight: 400,
   },
   refLine: {
-    fontSize: 7,
+    fontSize: 6,
     color: "#000000",
     fontFamily: "Fira Sans",
     fontWeight: 400,
     letterSpacing: -0.1,
+  },
+  refLineEmphasis: {
+    fontSize: 6.7,
   },
   refLineRow: {
     flexDirection: "row",
@@ -272,7 +289,7 @@ const styles = StyleSheet.create({
     marginLeft: 20,
   },
   refLineCode: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontFamily: "OCR-B",
     fontWeight: 700,
     color: "#000000",
@@ -400,15 +417,16 @@ const styles = StyleSheet.create({
   },
   summaryBranchAddress: {
     fontSize: 8,
-    fontFamily: "Times-Roman",
+    fontFamily: "Linguistics Pro Regular",
     lineHeight: 1.15,
+    marginTop: 1,
     marginBottom: 3,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 2,
-    borderBottomWidth: 0.8,
+    borderBottomWidth: 0.6,
     borderBottomColor: "#000000",
   },
   summaryRowThick: {
@@ -499,14 +517,14 @@ const styles = StyleSheet.create({
   tableHeaderCreditCell: { paddingLeft: 4 },
   openingRow: {
     flexDirection: "row",
-    borderBottomWidth: 0.8,
+    borderBottomWidth: 0.6,
     borderBottomColor: "#000000",
     paddingVertical: 1,
     paddingHorizontal: 1,
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 0.8,
+    borderBottomWidth: 0.7,
     borderBottomColor: "#000000",
     paddingVertical: 0.8,
     paddingHorizontal: 1,
@@ -514,7 +532,7 @@ const styles = StyleSheet.create({
   closingFooter: {
     borderTopWidth: 0,
     borderTopColor: "#000000",
-    borderBottomWidth: 0.8,
+    borderBottomWidth: 0.65,
     borderBottomColor: "#000000",
     marginTop: 0,
     paddingTop: 0,
@@ -527,7 +545,7 @@ const styles = StyleSheet.create({
   },
   closingFooterFeesRow: {
     flexDirection: "row",
-    borderTopWidth: 1,
+    borderTopWidth: 0.8,
     borderTopColor: "#000000",
     marginTop: 5,
     paddingTop: 4,
@@ -614,6 +632,7 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
     transactions.slice(FIRST_PAGE_TRANSACTION_COUNT),
     CONTINUATION_PAGE_TRANSACTION_COUNT,
   );
+  const hasContinuationPages = continuationPages.length > 0;
 
   return (
     <Document
@@ -633,7 +652,10 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
               <View style={styles.logoRow}>
-                <RBCLogo />
+                <View style={styles.logoWrapper}>
+                  <RBCLogo />
+                  <Text style={styles.logoTrademark}>®</Text>
+                </View>
                 <View style={{ marginTop: 2 }}>
                   <Text style={styles.bankName}>ROYAL BANK OF CANADA</Text>
                   <Text style={styles.bankAddress}>
@@ -643,7 +665,11 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
                 </View>
               </View>
               <View style={styles.refLineRow}>
-                <Text style={styles.refLine}>RBBDA30000_4780138E D 03282</Text>
+                <Text style={styles.refLine}>
+                  RBBDA30000_4780138{" "}
+                  <Text style={styles.refLineEmphasis}>E D</Text>
+                  {" "}03282
+                </Text>
                 <Text style={styles.refLineCode}>00203</Text>
               </View>
               {businessNameImageBase64 ? (
@@ -752,6 +778,12 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
             allTransactions={transactions}
             startIndex={0}
           />
+          {!hasContinuationPages ? (
+            <ClosingFooter
+              closingBalance={statement.closing_bal}
+              accountFees={statement.account_fees}
+            />
+          ) : null}
         </View>
       </Page>
 
@@ -784,7 +816,10 @@ function PaginatedStatementDocument({ account, statement, transactions }) {
               }
             />
             {pageIndex === continuationPages.length - 1 ? (
-              <ClosingFooter closingBalance={statement.closing_bal} />
+              <ClosingFooter
+                closingBalance={statement.closing_bal}
+                accountFees={statement.account_fees}
+              />
             ) : null}
           </View>
         </Page>
@@ -874,7 +909,7 @@ function ActivityTable({
   );
 }
 
-function ClosingFooter({ closingBalance }) {
+function ClosingFooter({ closingBalance, accountFees }) {
   return (
     <View style={styles.closingFooter}>
       <View style={styles.closingFooterRow}>
@@ -891,7 +926,7 @@ function ClosingFooter({ closingBalance }) {
       <View style={styles.closingFooterFeesRow}>
         <Text style={[styles.cellTextBold, styles.colDate]} />
         <Text style={[styles.closingFooterLabel, styles.colDesc]}>
-          Account Fees: $16.95
+          Account Fees: ${formatMoney(accountFees ?? 16.95)}
         </Text>
         <Text style={[styles.cellTextBold, styles.colDebit]} />
         <Text style={[styles.cellTextBold, styles.colCredit]} />
