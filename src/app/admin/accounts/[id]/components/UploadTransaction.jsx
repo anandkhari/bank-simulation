@@ -236,6 +236,19 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         throw new Error(result.error || "Upload failed");
       }
 
+      const incompleteNames = allSheets
+        .filter((sheet) => sheet.is_incomplete)
+        .map((sheet) => sheet.sheet_name);
+
+      const skippedNames = incompleteNames.join(", ");
+
+      if (incompleteNames.length > 0) {
+        toast.error(
+          `Statement generation skipped for: ${skippedNames}. Transactions were saved, but formal statements require a closing balance footer.`,
+          { duration: 6000 },
+        );
+      }
+
       toast.success(
         `Imported ${result.count} transactions. ${result.statements} verified statements generated.`,
       );
