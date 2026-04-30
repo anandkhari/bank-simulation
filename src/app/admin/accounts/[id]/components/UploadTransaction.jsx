@@ -41,7 +41,10 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         const trimmed = value.trim();
         const parsed = new Date(trimmed);
         if (isNaN(parsed.getTime())) return null;
-        return parsed.toISOString().split("T")[0];
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, "0");
+        const d = String(parsed.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
       }
       return null;
     } catch {
@@ -102,16 +105,12 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         continue;
       }
 
-      if (
-        row.every((cell) => cell === null || cell === undefined || cell === "")
-      )
-        continue;
+      if (row.every((cell) => cell === null || cell === undefined || cell === "")) continue;
 
       const description = row[2];
       if (!description) continue;
 
-      if (String(description).trim().toLowerCase() === "opening balance")
-        continue;
+      if (String(description).trim().toLowerCase() === "opening balance") continue;
 
       if (row[0]) {
         const parsedDate = parseExcelDate(row[0]);
@@ -143,7 +142,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
     return { transactions, openingBalance };
   }
-
   /* ----------------------------- */
   /* Upload Handler                */
   /* ----------------------------- */
@@ -192,10 +190,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
         if (!sheetData || sheetData.length < 3) continue;
 
-        const { transactions, openingBalance } = parseSheet(
-          sheetData,
-          sheetName,
-        );
+        const { transactions, openingBalance } = parseSheet(sheetData, sheetName);
 
         if (transactions.length === 0) continue;
 

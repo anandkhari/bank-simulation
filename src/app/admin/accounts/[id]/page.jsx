@@ -80,12 +80,10 @@ export default function AccountPage() {
     let result = [...transactions];
 
     if (dateFrom) {
-      result = result.filter((tx) => new Date(tx.date) >= new Date(dateFrom));
+      result = result.filter((tx) => tx.date >= dateFrom);
     }
     if (dateTo) {
-      const to = new Date(dateTo);
-      to.setHours(23, 59, 59, 999);
-      result = result.filter((tx) => new Date(tx.date) <= to);
+      result = result.filter((tx) => tx.date <= dateTo);
     }
 
     result.sort((a, b) => {
@@ -521,7 +519,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <td className="p-4 text-sm text-gray-500">
-                    {new Date(tx.date).toLocaleDateString("en-GB")}
+                    {new Date(tx.date + "T00:00:00").toLocaleDateString("en-GB")}
                   </td>
                   <td className="p-4 text-sm font-medium text-gray-800">
                     {tx.description}

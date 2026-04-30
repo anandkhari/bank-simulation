@@ -135,7 +135,7 @@ if (txError) {
   }, [id]);
 
   const formatDate = (date) =>
-    new Date(date).toLocaleDateString("en-US", {
+    new Date(date + "T00:00:00").toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -148,27 +148,25 @@ if (txError) {
     let filtered = [...list];
 
     if (filter === "14") {
-      const from = new Date();
-      from.setDate(now.getDate() - 14);
-      from.setHours(0, 0, 0, 0);
-      filtered = filtered.filter((tx) => new Date(tx.date) >= from);
+      const f = new Date();
+      f.setDate(f.getDate() - 14);
+      const fromStr = f.toLocaleDateString("en-CA");
+      filtered = filtered.filter((tx) => tx.date >= fromStr);
     }
 
     if (filter === "30") {
-      const from = new Date();
-      from.setDate(now.getDate() - 30);
-      from.setHours(0, 0, 0, 0);
-      filtered = filtered.filter((tx) => new Date(tx.date) >= from);
+      const f = new Date();
+      f.setDate(f.getDate() - 30);
+      const fromStr = f.toLocaleDateString("en-CA");
+      filtered = filtered.filter((tx) => tx.date >= fromStr);
     }
 
     if (filter === "lastMonth") {
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
-      lastDay.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((tx) => {
-        const d = new Date(tx.date);
-        return d >= firstDay && d <= lastDay;
-      });
+      const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastOfPrevMonth  = new Date(now.getFullYear(), now.getMonth(), 0);
+      const firstStr = firstOfPrevMonth.toLocaleDateString("en-CA");
+      const lastStr  = lastOfPrevMonth.toLocaleDateString("en-CA");
+      filtered = filtered.filter((tx) => tx.date >= firstStr && tx.date <= lastStr);
     }
 
     return filtered;
@@ -240,14 +238,10 @@ if (txError) {
     }
 
     if (filters.startDate) {
-      const start = new Date(filters.startDate);
-      start.setHours(0, 0, 0, 0);
-      filtered = filtered.filter((tx) => new Date(tx.date) >= start);
+      filtered = filtered.filter((tx) => tx.date >= filters.startDate);
     }
     if (filters.endDate) {
-      const end = new Date(filters.endDate);
-      end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((tx) => new Date(tx.date) <= end);
+      filtered = filtered.filter((tx) => tx.date <= filters.endDate);
     }
 
     if (filters.minAmount) {
