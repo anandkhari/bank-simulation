@@ -93,6 +93,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     const transactions = [];
     let currentDate = null;
     let openingBalance = null;
+    let hasClosingBalanceRow = false;
 
     for (let rowIndex = 0; rowIndex < sheetData.length; rowIndex++) {
       const row = sheetData[rowIndex];
@@ -100,6 +101,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       if (!row || !Array.isArray(row)) continue;
       if (rowIndex === 0) continue;
 
+      // Capture opening balance from row 1 column 12
       if (rowIndex === 1) {
         openingBalance = parseMoney(row[12]);
         continue;
@@ -107,10 +109,19 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
       if (row.every((cell) => cell === null || cell === undefined || cell === "")) continue;
 
-      const description = row[2];
+      const description = row[2] ? String(row[2]).trim() : "";
       if (!description) continue;
 
-      if (String(description).trim().toLowerCase() === "opening balance") continue;
+      const lowerDesc = description.toLowerCase();
+
+      // Skip common labels
+      if (lowerDesc === "opening balance") continue;
+
+      // Detect Closing Balance footer (don't add as transaction)
+      if (lowerDesc.includes("closing balance")) {
+        hasClosingBalanceRow = true;
+        continue;
+      }
 
       if (row[0]) {
         const parsedDate = parseExcelDate(row[0]);
@@ -130,7 +141,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
       transactions.push({
         date: currentDate,
-        description: String(description).trim(),
+        description: description,
         debit: debit ?? 0,
         credit: credit ?? 0,
         amount,
@@ -140,8 +151,12 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       });
     }
 
-    return { transactions, openingBalance };
+    // Flag as incomplete if the footer row was never found
+    const is_incomplete = !hasClosingBalanceRow;
+
+    return { transactions, openingBalance, is_incomplete };
   }
+
   /* ----------------------------- */
   /* Upload Handler                */
   /* ----------------------------- */
@@ -190,7 +205,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
 
         if (!sheetData || sheetData.length < 3) continue;
 
-        const { transactions, openingBalance } = parseSheet(sheetData, sheetName);
+        const { transactions, openingBalance, is_incomplete } = parseSheet(sheetData, sheetName);
 
         if (transactions.length === 0) continue;
 
@@ -198,6 +213,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
           sheet_name: sheetName,
           opening_balance: openingBalance,
           transactions,
+          is_incomplete, // Passed to backend to skip PDF/Statement entry
         });
       }
 
@@ -221,7 +237,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       }
 
       toast.success(
-        `Imported ${result.count} transactions across ${result.statements} statements`,
+        `Imported ${result.count} transactions. ${result.statements} verified statements generated.`,
       );
 
       setFile(null);
@@ -235,9 +251,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
     }
   };
 
-  /* ----------------------------- */
-  /* Manual Transaction Submit     */
-  /* ----------------------------- */
   /* ----------------------------- */
   /* Manual Transaction Submit     */
   /* ----------------------------- */
@@ -273,6 +286,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
               sheet_name: "manual",
               opening_balance: null,
               transactions: [transaction],
+              is_incomplete: true, // Manual entries never generate statements
             },
           ],
         }),
@@ -309,7 +323,7 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
       
       if (data.success) {
         toast.success("Balances perfectly synced!");
-        onUploadSuccess?.(); // Refreshes the parent table
+        onUploadSuccess?.(); 
       } else {
         toast.error(data.error || "Recalculation failed");
       }
@@ -323,13 +337,9 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
   const set = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  /* ----------------------------- */
-  /* UI                            */
-  /* ----------------------------- */
   return (
     <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-xl">
       <div className="flex flex-col items-center gap-4">
-        {/* Drop zone */}
         <div
           onClick={() => fileInputRef.current?.click()}
           className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-brand transition"
@@ -363,7 +373,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         </button>
       </div>
 
-      {/* Divider + Actions (Manual Toggle & Sync Math) */}
       <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
         <button
           onClick={() => setShowManual((v) => !v)}
@@ -389,10 +398,8 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
         </button>
       </div>
 
-      {/* Manual form */}
       {showManual && (
         <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-3">
-          {/* Type toggle */}
           <div>
             <p className="text-xs text-gray-500 mb-2">Transaction type</p>
             <div className="flex gap-2">
@@ -414,7 +421,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
             </div>
           </div>
 
-          {/* Date + Amount */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Date</label>
@@ -439,7 +445,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="text-xs text-gray-500 mb-1 block">
               Description
@@ -453,7 +458,6 @@ export default function UploadTransaction({ accountId, onUploadSuccess }) {
             />
           </div>
 
-          {/* Cancel + Save */}
           <div className="flex gap-2 pt-1">
             <button
               onClick={() => {

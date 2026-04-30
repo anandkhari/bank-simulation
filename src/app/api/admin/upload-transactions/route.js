@@ -82,7 +82,6 @@ function getStatementMonthYear(sheetName, startDate, endDate) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    // 1. Destructure the new is_manual flag
     const { account_id, sheets, is_manual } = body;
 
     console.log(
@@ -99,7 +98,7 @@ export async function POST(req) {
 
     const { data: accountData, error: accountError } = await supabaseAdmin
       .from("accounts")
-      .select("id, user_id, account_name, account_number, address, balance") // Fetched balance just in case
+      .select("id, user_id, account_name, account_number, address, balance")
       .eq("id", account_id)
       .single();
 
@@ -118,7 +117,8 @@ export async function POST(req) {
     let latestClosingBalance = null;
 
     for (const sheet of sheets) {
-      const { sheet_name, opening_balance, transactions } = sheet;
+      // ✅ Destructure is_incomplete from the sheet payload
+      const { sheet_name, opening_balance, transactions, is_incomplete } = sheet;
 
       if (!transactions || transactions.length === 0) continue;
 
@@ -137,39 +137,28 @@ export async function POST(req) {
 
       const existingFingerprints = new Set((existingRows || []).map((r) => r.fingerprint));
 
-    const newTransactions = withFingerprints.filter(
-  (t) => !existingFingerprints.has(t.fingerprint)
-);
+      const newTransactions = withFingerprints.filter(
+        (t) => !existingFingerprints.has(t.fingerprint)
+      );
 
-if (newTransactions.length === 0) continue;
+      if (newTransactions.length === 0) continue;
 
-// Validate and correct amount signs before processing
-const validatedTransactions = newTransactions.map((t) => {
-  const credit = Number(t.credit ?? 0);
-  const debit = Number(t.debit ?? 0);
-  let amount = Number(t.amount);
+      const validatedTransactions = newTransactions.map((t) => {
+        const credit = Number(t.credit ?? 0);
+        const debit = Number(t.debit ?? 0);
+        let amount = Number(t.amount);
 
-  // If amount is missing or NaN, derive it from debit/credit
-  if (!amount || isNaN(amount)) {
-    amount = credit > 0 ? credit : -debit;
-  }
+        if (!amount || isNaN(amount)) {
+          amount = credit > 0 ? credit : -debit;
+        }
 
-  // Ensure sign is consistent with debit/credit
-  if (credit > 0 && amount < 0) {
-    console.warn(`[sign-fix] Credit had negative amount — corrected: ${t.description}`);
-    amount = Math.abs(amount);
-  }
+        if (credit > 0 && amount < 0) amount = Math.abs(amount);
+        if (debit > 0 && amount > 0) amount = -Math.abs(amount);
 
-  if (debit > 0 && amount > 0) {
-    console.warn(`[sign-fix] Debit had positive amount — corrected: ${t.description}`);
-    amount = -Math.abs(amount);
-  }
+        return { ...t, amount: Number(amount.toFixed(2)) };
+      });
 
-  return { ...t, amount: Number(amount.toFixed(2)) };
-});
-
-const sorted = validatedTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
-
+      const sorted = validatedTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
       const withBalances = recalculateBalances(sorted, opening_balance);
 
       const start_date = withBalances[0].date;
@@ -178,8 +167,10 @@ const sorted = validatedTransactions.sort((a, b) => new Date(a.date) - new Date(
 
       let statement_id = null;
 
-      // 2. Bypass Statement Creation if Manual
-      if (!is_manual) {
+      // ✅ SKIP statement creation if manual OR incomplete
+      const skipStatementRecord = is_manual || is_incomplete;
+
+      if (!skipStatementRecord) {
         const { month: statementMonth, year: statementYear } = getStatementMonthYear(
           sheet_name,
           start_date,
@@ -211,100 +202,90 @@ const sorted = validatedTransactions.sort((a, b) => new Date(a.date) - new Date(
 
       // 3. Fetch true previous balance for Manual Entries
       let manualBalanceAfter = null;
+      let manualSortOrder = 1; 
 
-      let manualSortOrder = 1; // default
+      if (is_manual) {
+        const { data: lastTxs } = await supabaseAdmin
+          .from("transactions")
+          .select("balance_after")
+          .eq("account_id", account_id)
+          .order("date", { ascending: false })
+          .order("sort_order", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-if (is_manual) {
-  // Fetch true previous balance using correct ordering
-  const { data: lastTxs } = await supabaseAdmin
-    .from("transactions")
-    .select("balance_after")
-    .eq("account_id", account_id)
-    .order("date", { ascending: false })
-    .order("sort_order", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .limit(1);
+        const { data: accountMeta } = await supabaseAdmin
+          .from("accounts")
+          .select("opening_balance")
+          .eq("id", account_id)
+          .single();
 
-  const { data: accountMeta } = await supabaseAdmin
-  .from("accounts")
-  .select("opening_balance")
-  .eq("id", account_id)
-  .single();
+        const previousBalance = (lastTxs && lastTxs.length > 0)
+          ? Number(lastTxs[0].balance_after)
+          : Number(accountMeta?.opening_balance ?? 0);
 
-const previousBalance = (lastTxs && lastTxs.length > 0)
-  ? Number(lastTxs[0].balance_after)
-  : Number(accountMeta?.opening_balance ?? 0);
+        manualBalanceAfter = Number((previousBalance + sorted[0].amount).toFixed(2));
 
-  manualBalanceAfter = Number((previousBalance + sorted[0].amount).toFixed(2));
+        const transactionDate = sorted[0].date;
+        const { data: sameDayTxs } = await supabaseAdmin
+          .from("transactions")
+          .select("sort_order")
+          .eq("account_id", account_id)
+          .eq("date", transactionDate)
+          .order("sort_order", { ascending: false, nullsFirst: false })
+          .limit(1);
 
-  // Find the next sort_order for this account + date
-  const transactionDate = sorted[0].date;
-  const { data: sameDayTxs } = await supabaseAdmin
-    .from("transactions")
-    .select("sort_order")
-    .eq("account_id", account_id)
-    .eq("date", transactionDate)
-    .order("sort_order", { ascending: false, nullsFirst: false })
-    .limit(1);
+        manualSortOrder = sameDayTxs && sameDayTxs.length > 0
+          ? (sameDayTxs[0].sort_order ?? 0) + 1
+          : 1;
+      }
 
-  manualSortOrder = sameDayTxs && sameDayTxs.length > 0
-    ? (sameDayTxs[0].sort_order ?? 0) + 1
-    : 1;
-}
+      const existingSortOrders = {};
+      if (!is_manual) {
+        const uniqueDates = [...new Set(withBalances.map((t) => t.date))];
+        const { data: existingCounts } = await supabaseAdmin
+          .from("transactions")
+          .select("date, sort_order")
+          .eq("account_id", account_id)
+          .in("date", uniqueDates);
 
-     // For bulk: pre-fetch existing sort_order counts per date
-const existingSortOrders = {};
-if (!is_manual) {
-  const uniqueDates = [...new Set(withBalances.map((t) => t.date))];
-  const { data: existingCounts } = await supabaseAdmin
-    .from("transactions")
-    .select("date, sort_order")
-    .eq("account_id", account_id)
-    .in("date", uniqueDates)
-    .order("sort_order", { ascending: false, nullsFirst: false });
+        for (const row of existingCounts || []) {
+          if (!existingSortOrders[row.date] || row.sort_order > existingSortOrders[row.date]) {
+            existingSortOrders[row.date] = row.sort_order ?? 0;
+          }
+        }
+      }
 
-  // Track the highest sort_order already in DB per date
-  for (const row of existingCounts || []) {
-    if (!existingSortOrders[row.date] || row.sort_order > existingSortOrders[row.date]) {
-      existingSortOrders[row.date] = row.sort_order ?? 0;
-    }
-  }
-}
+      const bulkSortCounters = {};
+      const records = withBalances.map((t) => {
+        let sort_order;
+        if (is_manual) {
+          sort_order = manualSortOrder;
+        } else {
+          if (bulkSortCounters[t.date] === undefined) {
+            bulkSortCounters[t.date] = (existingSortOrders[t.date] ?? 0) + 1;
+          } else {
+            bulkSortCounters[t.date] += 1;
+          }
+          sort_order = bulkSortCounters[t.date];
+        }
 
-// Track incrementing sort_order per date for bulk
-const bulkSortCounters = {};
-
-const records = withBalances.map((t) => {
-  let sort_order;
-
-  if (is_manual) {
-    sort_order = manualSortOrder;
-  } else {
-    // Start from after the highest existing sort_order for that date
-    if (bulkSortCounters[t.date] === undefined) {
-      bulkSortCounters[t.date] = (existingSortOrders[t.date] ?? 0) + 1;
-    } else {
-      bulkSortCounters[t.date] += 1;
-    }
-    sort_order = bulkSortCounters[t.date];
-  }
-
-  return {
-    user_id,
-    account_id,
-    statement_id,
-    date: t.date,
-    description: t.description,
-    debit: t.debit ?? null,
-    credit: t.credit ?? null,
-    amount: t.amount,
-    type: t.type,
-    balance_after: is_manual ? manualBalanceAfter : t.balance_after,
-    fingerprint: t.fingerprint,
-    source: is_manual ? "manual_entry" : "excel_import",
-    sort_order, // ✅ now always assigned
-  };
-});
+        return {
+          user_id,
+          account_id,
+          statement_id, // This will correctly be null for incomplete/manual sheets
+          date: t.date,
+          description: t.description,
+          debit: t.debit ?? null,
+          credit: t.credit ?? null,
+          amount: t.amount,
+          type: t.type,
+          balance_after: is_manual ? manualBalanceAfter : t.balance_after,
+          fingerprint: t.fingerprint,
+          source: is_manual ? "manual_entry" : "excel_import",
+          sort_order,
+        };
+      });
 
       const { error: insertError } = await supabaseAdmin.from("transactions").insert(records);
 
@@ -318,8 +299,8 @@ const records = withBalances.map((t) => {
 
       totalInserted += records.length;
 
-      // 4. Bypass PDF Generation & Upload if Manual
-      if (!is_manual) {
+      // ✅ SKIP PDF generation if manual OR incomplete
+      if (!skipStatementRecord) {
         totalStatements += 1;
         const totalDeposits = withBalances.reduce((sum, t) => sum + (t.credit ?? 0), 0);
         const totalDebits = withBalances.reduce((sum, t) => sum + (t.debit ?? 0), 0);
@@ -356,28 +337,28 @@ const records = withBalances.map((t) => {
           console.error(`[12a] PDF generation/upload failed:`, pdfError);
         }
 
-        // Only track latest balances for bulk statements
         if (!latestEndDate || end_date > latestEndDate) {
           latestEndDate = end_date;
           latestClosingBalance = closing_bal;
         }
       } else {
-        // 5. Update the master account balance using our new, accurate manual balance
-        await supabaseAdmin
-          .from("accounts")
-          .update({ balance: manualBalanceAfter })
-          .eq("id", account_id);
-        console.log(`[15] Manual entry: accounts.balance synced to ${manualBalanceAfter}`);
+        // For manual or incomplete entries, we still want to keep the account's master balance up to date
+        // Note: For incomplete bulk sheets, latestClosingBalance handles this below the loop.
+        if (is_manual) {
+           await supabaseAdmin
+            .from("accounts")
+            .update({ balance: manualBalanceAfter })
+            .eq("id", account_id);
+        }
       }
     }
 
-    // 6. Bulk Statement Account Balance Overwrite (Unchanged)
+    // 6. Final Bulk Balance Update (Ensures master balance matches the last transaction processed)
     if (!is_manual && latestClosingBalance !== null) {
       await supabaseAdmin
         .from("accounts")
         .update({ balance: latestClosingBalance })
         .eq("id", account_id);
-      console.log(`[15] Bulk entry: accounts.balance updated to ${latestClosingBalance}`);
     }
 
     return Response.json({
