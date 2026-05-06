@@ -148,15 +148,16 @@ export default function CreateCustomerPage() {
               <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
                 +1
               </span>
-              <input
-                type="tel"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                placeholder="123-456-7890"
-                pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
-                className="flex-1 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 rounded-r-md text-gray-900"
-              />
+             <input
+  type="tel"
+  name="phone"
+  value={form.phone}
+  onChange={handleChange}
+  placeholder="1234567890"
+  // Allows digits, spaces, hyphens, dots, and parentheses; 10 to 15 characters long
+  pattern="[\d\s\-\(\)\.]{10,15}" 
+  className="flex-1 border border-gray-300 p-3 rounded-r-md"
+/>
             </div>
           </div>
 

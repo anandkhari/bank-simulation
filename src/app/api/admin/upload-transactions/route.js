@@ -299,6 +299,15 @@ export async function POST(req) {
 
       totalInserted += records.length;
 
+      // Keep master balance tracking up-to-date even when statement/PDF generation is skipped
+      // (e.g., incomplete cycles missing a closing-balance footer).
+      if (!is_manual) {
+        if (!latestEndDate || end_date > latestEndDate) {
+          latestEndDate = end_date;
+          latestClosingBalance = closing_bal;
+        }
+      }
+
       // ✅ SKIP PDF generation if manual OR incomplete
       if (!skipStatementRecord) {
         totalStatements += 1;
@@ -335,11 +344,6 @@ export async function POST(req) {
           }
         } catch (pdfError) {
           console.error(`[12a] PDF generation/upload failed:`, pdfError);
-        }
-
-        if (!latestEndDate || end_date > latestEndDate) {
-          latestEndDate = end_date;
-          latestClosingBalance = closing_bal;
         }
       } else {
         // For manual or incomplete entries, we still want to keep the account's master balance up to date
